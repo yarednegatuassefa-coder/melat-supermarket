@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$envFile = Join-Path $repoRoot "server\.env"
-if (Test-Path $envFile) { throw "server/.env already exists. Refusing to overwrite credentials." }
+$envFile = Join-Path $repoRoot ".env"
+if (Test-Path $envFile) { throw "root .env already exists. Refusing to overwrite credentials." }
 $service = Get-Service -Name "postgresql-x64-18" -ErrorAction SilentlyContinue
 if (-not $service) { throw "PostgreSQL 18 Windows service was not found." }
 if ($service.Status -ne "Running") { Start-Service -Name "postgresql-x64-18" }
