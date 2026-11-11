@@ -36,8 +36,8 @@ try {
     "BACKUP_OFFSITE_DIRECTORY=",
     "BACKUP_AGE_IDENTITY_FILE=",
     "OWNER_USERNAME=$ownerUsername",
-    "OWNER_FULL_NAME=$ownerFullNameEnv",
-    "OWNER_INITIAL_PASSWORD=$ownerPasswordEnv"
+    "OWNER_FULL_NAME_BASE64=$ownerFullNameBase64",
+    "OWNER_INITIAL_PASSWORD_BASE64=$ownerPasswordBase64"
   ) | Set-Content -Path $envFile -Encoding UTF8
 } finally {
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($dbPtr)
@@ -54,7 +54,52 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "Database migration failed. Review PostgreSQL errors before retrying." }
   npm run db:bootstrap --workspace server
   if ($LASTEXITCODE -ne 0) { throw "Owner bootstrap failed. Inspect app_users before retrying." }
-  (Get-Content $envFile) -replace '^OWNER_INITIAL_PASSWORD=.*$', 'OWNER_INITIAL_PASSWORD=' | Set-Content -Path $envFile -Encoding UTF8
+  (Get-Content $envFile) -replace '^OWNER_INITIAL_PASSWORD=.*
+  $proc = Start-Process -FilePath "npm.cmd" -ArgumentList @("run","start","--workspace","server") -WorkingDirectory $repoRoot -PassThru -WindowStyle Hidden
+  Start-Sleep -Seconds 3
+  try {
+    $health = Invoke-RestMethod -Uri "http://localhost:4000/api/health" -TimeoutSec 8
+    if ($health.status -ne "ok") { throw "API health check did not report ok." }
+  } catch {
+    Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue
+    throw "API did not pass its health check. Inspect the server process before retrying."
+  }
+  Start-Process "http://localhost:4000"
+  Write-Output "Melat local API and UI are running at http://localhost:4000"
+  Write-Output "Sign in using the owner credentials you just created."
+  Write-Output "This is local-machine verification only. Do not expose it to the LAN; configure Caddy HTTPS before staff devices connect."
+} finally { Pop-Location }
+, 'OWNER_INITIAL_PASSWORD=' -replace '^OWNER_INITIAL_PASSWORD_BASE64=.*
+  $proc = Start-Process -FilePath "npm.cmd" -ArgumentList @("run","start","--workspace","server") -WorkingDirectory $repoRoot -PassThru -WindowStyle Hidden
+  Start-Sleep -Seconds 3
+  try {
+    $health = Invoke-RestMethod -Uri "http://localhost:4000/api/health" -TimeoutSec 8
+    if ($health.status -ne "ok") { throw "API health check did not report ok." }
+  } catch {
+    Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue
+    throw "API did not pass its health check. Inspect the server process before retrying."
+  }
+  Start-Process "http://localhost:4000"
+  Write-Output "Melat local API and UI are running at http://localhost:4000"
+  Write-Output "Sign in using the owner credentials you just created."
+  Write-Output "This is local-machine verification only. Do not expose it to the LAN; configure Caddy HTTPS before staff devices connect."
+} finally { Pop-Location }
+, 'OWNER_INITIAL_PASSWORD_BASE64=' -replace '^OWNER_FULL_NAME_BASE64=.*
+  $proc = Start-Process -FilePath "npm.cmd" -ArgumentList @("run","start","--workspace","server") -WorkingDirectory $repoRoot -PassThru -WindowStyle Hidden
+  Start-Sleep -Seconds 3
+  try {
+    $health = Invoke-RestMethod -Uri "http://localhost:4000/api/health" -TimeoutSec 8
+    if ($health.status -ne "ok") { throw "API health check did not report ok." }
+  } catch {
+    Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue
+    throw "API did not pass its health check. Inspect the server process before retrying."
+  }
+  Start-Process "http://localhost:4000"
+  Write-Output "Melat local API and UI are running at http://localhost:4000"
+  Write-Output "Sign in using the owner credentials you just created."
+  Write-Output "This is local-machine verification only. Do not expose it to the LAN; configure Caddy HTTPS before staff devices connect."
+} finally { Pop-Location }
+, 'OWNER_FULL_NAME_BASE64=' | Set-Content -Path $envFile -Encoding UTF8
   $proc = Start-Process -FilePath "npm.cmd" -ArgumentList @("run","start","--workspace","server") -WorkingDirectory $repoRoot -PassThru -WindowStyle Hidden
   Start-Sleep -Seconds 3
   try {
