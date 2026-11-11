@@ -23,6 +23,7 @@ const roles: Record<User["role"], string> = { owner: "Owner", manager: "Manager"
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [apiReady, setApiReady] = useState<boolean | null>(null);
   const [tab, setTab] = useState("overview");
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
@@ -54,6 +55,7 @@ export default function App() {
   }, [tab, user]);
 
   useEffect(() => {
+    api<{ status: string }>("/api/health").then((result) => setApiReady(result.status === "ok")).catch(() => setApiReady(false));
     api<{ user: User }>("/api/auth/me").then((result) => setUser(result.user)).catch(() => setUser(null)).finally(() => setLoading(false));
   }, []);
   useEffect(() => { void loadData(); }, [loadData]);
@@ -61,6 +63,7 @@ export default function App() {
   async function login(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError("");
     try {
+      if (apiReady !== true) throw new Error("The hosted preview is not connected to the Melat API and PostgreSQL database. Login is available after the local store installation passes its health check.");
       const result = await api<{ user: User }>("/api/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });
       setUser(result.user); setPassword(""); setTab("overview");
     } catch (e) { setError(e instanceof Error ? e.message : "Sign in failed."); }
@@ -102,8 +105,10 @@ export default function App() {
         <form onSubmit={login} className="form-stack">
           <label>Username<input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required /></label>
           <label>Password<input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
+          {apiReady === false && <p className="form-error">Preview only: this site has no connected Melat database. Use the configured local store installation to sign in.</p>}
+          {apiReady === null && <p className="login-copy">Checking secure store connection…</p>}
           {error && <p className="form-error">{error}</p>}
-          <button disabled={busy}>{busy ? "Signing in…" : "Sign in securely"}</button>
+          <button disabled={busy || apiReady !== true}>{busy ? "Signing in…" : "Sign in securely"}</button>
         </form>
         <p className="login-foot">PRIVATE STORE SYSTEM · ETB</p>
       </section>
