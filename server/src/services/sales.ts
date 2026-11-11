@@ -109,7 +109,6 @@ export async function createSale(pool:Pool, input:{actorId:string;cashSessionId:
     if(!session.rowCount) throw new Error("Open cash drawer not found for this cashier.");
     if(!input.lines.length||!input.payments.length) throw new Error("At least one item and one payment are required.");
     if(input.payments.some(p=>money(p.amount)<=0)) throw new Error("Every split payment must be greater than zero.");
-    if(input.payments.filter(p=>p.method!=="cash").length>1) throw new Error("Use at most one electronic tender per checkout; split the remaining amount with cash.");
     const paymentTotal=input.payments.reduce((s,p)=>s+money(p.amount),0);
     let subtotal=0,discount=0,tax=0;
     const normalized=[];
