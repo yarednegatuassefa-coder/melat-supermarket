@@ -1,5 +1,5 @@
 param(
-  [string]$BackupDirectory = "$PSScriptRoot\..\..\backups"
+  [string]$BackupDirectory = "$PSScriptRoot\..\backups"
 )
 $ErrorActionPreference = "Stop"
 if (-not $env:DATABASE_URL) { throw "DATABASE_URL is required." }
