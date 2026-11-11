@@ -24,13 +24,13 @@ export async function reverseInventoryMovements(client:PoolClient,actorId:string
   [sourceType,sourceId,allowedTypes]
  );
  for(const movement of movements.rows){
+  const balance=await client.query("SELECT quantity_on_hand,weighted_average_cost,reserved_quantity FROM inventory_balances WHERE product_id=$1 FOR UPDATE",[movement.product_id]);
+  if(!balance.rowCount)throw new Error("Inventory balance is missing.");
   const batch=await client.query("SELECT original_quantity,remaining_quantity FROM inventory_batches WHERE id=$1 FOR UPDATE",[movement.batch_id]);
   if(!batch.rowCount)throw new Error("Original inventory batch was not found.");
   const delta=Number(movement.quantity_delta),reverseDelta=-delta;
   const nextBatch=Number(batch.rows[0].remaining_quantity)+reverseDelta;
   if(nextBatch < -0.00005 || nextBatch > Number(batch.rows[0].original_quantity)+0.00005)throw new Error("Inventory has moved since the original transaction; reversal would create invalid batch stock.");
-  const balance=await client.query("SELECT quantity_on_hand,weighted_average_cost,reserved_quantity FROM inventory_balances WHERE product_id=$1 FOR UPDATE",[movement.product_id]);
-  if(!balance.rowCount)throw new Error("Inventory balance is missing.");
   const oldQty=Number(balance.rows[0].quantity_on_hand),oldWac=Number(balance.rows[0].weighted_average_cost),newQty=oldQty+reverseDelta;
   if(newQty < Number(balance.rows[0].reserved_quantity)-0.00005)throw new Error("Cannot reverse this transaction because stock is reserved for a pending checkout.");if(newQty < -0.00005)throw new Error("Insufficient current stock to reverse this transaction.");
   const unitCost=Number(movement.unit_cost),oldValue=oldQty*oldWac,newValue=oldValue+(reverseDelta*unitCost);
