@@ -42,6 +42,8 @@ export async function finalizeSale(client: PoolClient, saleId: string, actorId: 
   for(const line of lines.rows){
     const product=await client.query("SELECT tracks_expiry FROM products WHERE id=$1 AND is_active=true",[line.product_id]);
     if(!product.rowCount) throw new Error("A product in this sale is no longer active.");
+    const reservation=await client.query("SELECT quantity_on_hand::text qty,reserved_quantity::text reserved FROM inventory_balances WHERE product_id=$1 FOR UPDATE",[line.product_id]);
+    if(!reservation.rowCount||Number(reservation.rows[0].reserved)+0.00005<Number(line.quantity))throw new Error("Checkout stock reservation is missing or insufficient.");
     const batches=await client.query(
       `SELECT id,remaining_quantity::text,expiry_date,received_at,acquisition_unit_cost::text
          FROM inventory_batches WHERE product_id=$1 AND remaining_quantity>0
@@ -73,9 +75,10 @@ export async function finalizeSale(client: PoolClient, saleId: string, actorId: 
     const balance=await client.query(
       `UPDATE inventory_balances
            SET quantity_on_hand=quantity_on_hand-$2,
+               reserved_quantity=reserved_quantity-$2,
                weighted_average_cost=CASE WHEN quantity_on_hand-$2 <= 0.00005 THEN 0 ELSE weighted_average_cost END,
                updated_at=now()
-         WHERE product_id=$1 AND quantity_on_hand >= $2 RETURNING weighted_average_cost::text`,
+         WHERE product_id=$1 AND quantity_on_hand >= $2 AND reserved_quantity >= $2 RETURNING weighted_average_cost::text`,
       [line.product_id,line.quantity]
     );
     if(!balance.rowCount) throw new Error("Inventory balance is insufficient or inconsistent.");
@@ -112,15 +115,19 @@ export async function createSale(pool:Pool, input:{actorId:string;cashSessionId:
     const paymentTotal=input.payments.reduce((s,p)=>s+money(p.amount),0);
     let subtotal=0,discount=0,tax=0;
     const normalized=[];
-    for(const item of input.lines){
+    for(const item of [...input.lines].sort((a,b)=>a.productId.localeCompare(b.productId))){
       const p=await client.query(
-        `SELECT p.id,pp.selling_price::text,b.weighted_average_cost::text
-           FROM products p JOIN inventory_balances b ON b.product_id=p.id
+        `SELECT p.id,pp.selling_price::text,b.weighted_average_cost::text,b.reserved_quantity::text
            JOIN LATERAL(SELECT selling_price FROM product_prices WHERE product_id=p.id AND effective_from<=now() AND (effective_to IS NULL OR effective_to>now()) ORDER BY effective_from DESC LIMIT 1) pp ON true
           WHERE p.id=$1 AND p.is_active=true FOR UPDATE OF p,b`,[item.productId]);
       if(!p.rowCount) throw new Error("Product unavailable or has no active selling price.");
       const qty=money(item.quantity),price=money(p.rows[0].selling_price),lineDiscount=money(item.discountAmount??"0");
       if(qty<=0||lineDiscount<0||lineDiscount>qty*price) throw new Error("Invalid item quantity or discount.");
+      const sellable=await client.query("SELECT COALESCE(sum(remaining_quantity),0)::text qty FROM inventory_batches WHERE product_id=$1 AND remaining_quantity>0 AND (expiry_date IS NULL OR expiry_date>=CURRENT_DATE)",[item.productId]);
+      const available=Number(sellable.rows[0].qty)-Number(p.rows[0].reserved_quantity);
+      if(qty>available+0.00005)throw new Error(`Insufficient unreserved non-expired stock for product ${item.productId}. Available: ${Math.max(0,available).toFixed(4)}.`);
+      const reserved=await client.query("UPDATE inventory_balances SET reserved_quantity=reserved_quantity+$2 WHERE product_id=$1 AND quantity_on_hand-reserved_quantity >= $2 RETURNING reserved_quantity::text",[item.productId,amount(qty)]);
+      if(!reserved.rowCount)throw new Error("Stock was reserved by another checkout. Refresh the cart and retry.");
       const net=qty*price-lineDiscount;
       let lineTax=0;
       if(item.taxRateId){
