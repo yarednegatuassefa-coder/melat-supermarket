@@ -29,7 +29,7 @@ export async function createSession(pool: Pool, userId: string, req: Request, re
     [userId, hash(token), expiresAt, req.ip, req.get("user-agent") ?? null]
   );
   res.cookie(COOKIE, token, {
-    httpOnly: true, secure: process.env.COOKIE_SECURE === "true",
+    httpOnly: true, secure: process.env.COOKIE_SECURE === "true" || (process.env.COOKIE_SECURE !== "false" && process.env.NODE_ENV === "production"),
     sameSite: "lax", path: "/", expires: expiresAt
   });
   return inserted.rows[0].id as string;
