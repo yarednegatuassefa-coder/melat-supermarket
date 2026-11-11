@@ -122,7 +122,7 @@ export async function createSale(pool:Pool, input:{actorId:string;cashSessionId:
       if(item.taxRateId){
         const rate=await client.query("SELECT rate::text FROM tax_rates WHERE id=$1 AND effective_from<=CURRENT_DATE AND (effective_to IS NULL OR effective_to>CURRENT_DATE)",[item.taxRateId]);
         if(!rate.rowCount) throw new Error("Selected tax rate is not active.");
-        lineTax=net*money(rate.rows[0].rate);
+        lineTax=Number((net*money(rate.rows[0].rate)).toFixed(4));
       }
       subtotal+=qty*price; discount+=lineDiscount; tax+=lineTax;
       normalized.push({productId:item.productId,quantity:amount(qty),unitPrice:amount(price),discount:amount(lineDiscount),tax:amount(lineTax),net:amount(net+lineTax),wac:amount(money(p.rows[0].weighted_average_cost))});
@@ -138,17 +138,19 @@ export async function createSale(pool:Pool, input:{actorId:string;cashSessionId:
       `INSERT INTO sale_lines(sale_id,product_id,quantity,unit_price,discount_amount,tax_amount,line_total,unit_wac_snapshot)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
       [sale.rows[0].id,line.productId,line.quantity,line.unitPrice,line.discount,line.tax,line.net,line.wac]);
+    const paymentIds:string[]=[];
     for(const payment of input.payments){
       const status=payment.method==="cash"?"confirmed":"pending";
-      await client.query(
+      const paymentRow=await client.query(
         `INSERT INTO sale_payments(sale_id,method,amount,status,provider_reference,verified_by,verified_at)
-         VALUES($1,$2,$3,$4,$5,$6,CASE WHEN $4='confirmed' THEN now() ELSE NULL END)`,
+         VALUES($1,$2,$3,$4,$5,$6,CASE WHEN $4='confirmed' THEN now() ELSE NULL END) RETURNING id`,
         [sale.rows[0].id,payment.method,amount(money(payment.amount)),status,payment.providerReference??null,status==="confirmed"?input.actorId:null]);
+      paymentIds.push(paymentRow.rows[0].id);
     }
     const pending=input.payments.some(p=>p.method!=="cash");
     if(!pending) await finalizeSale(client,sale.rows[0].id,input.actorId);
     await client.query("INSERT INTO audit_log(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'create','sale',$2,$3::jsonb)",[input.actorId,sale.rows[0].id,JSON.stringify({saleNumber,total:amount(total),paymentCount:input.payments.length})]);
     await client.query("COMMIT");
-    return {saleId:sale.rows[0].id,saleNumber,total:amount(total),status:pending?"awaiting_payment":"posted",receiptUrl:`/api/sales/${sale.rows[0].id}/receipt`};
+    return {saleId:sale.rows[0].id,saleNumber,total:amount(total),status:pending?"awaiting_payment":"posted",pendingPaymentIds:pending?paymentIds.filter((_,i)=>input.payments[i].method!=="cash"):[],receiptUrl:`/api/sales/${sale.rows[0].id}/receipt`};
   }catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}
 }
