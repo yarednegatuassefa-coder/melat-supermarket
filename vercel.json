@@ -5,7 +5,7 @@
   "outputDirectory": "client/dist",
   "functions": {
     "api/[...path].ts": {
-      "maxDuration": 15
+      "maxDuration": 30
     }
   }
 }
