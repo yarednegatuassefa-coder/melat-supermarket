@@ -23,10 +23,10 @@ The POS remains available during an external internet outage only while the loca
 
 ## First-time setup
 
-On Windows, the repository includes a guided bootstrap script. From the repository root, run `powershell -ExecutionPolicy Bypass -File .\\scripts\\setup-local-melat.ps1`. It prompts for the existing PostgreSQL application password and a new owner password without printing them, then installs dependencies, builds, applies migrations, creates the first owner and starts the local UI. It refuses to overwrite an existing `server/.env`.
+On Windows, the repository includes a guided bootstrap script. From the repository root, run `powershell -ExecutionPolicy Bypass -File .\\scripts\\setup-local-melat.ps1`. It prompts for the existing PostgreSQL application password and a new owner password without printing them, then installs dependencies, builds, applies migrations, creates the first owner and starts the local UI. It writes the root `.env` file used by both the migration runner and API, and refuses to overwrite an existing `.env`.
 
 1. Create a dedicated empty PostgreSQL database named melat and a least-privilege role named melat_app.
-2. Copy server/.env.example to server/.env. Set the real DATABASE_URL, owner name and a unique initial owner password. Never commit this file.
+2. If configuring manually, copy `.env.example` to the repository-root `.env`. Set the real DATABASE_URL, owner name and a unique initial owner password. Never commit this file.
 3. From the repository root run npm install, then npm run build.
 4. Apply migrations only to the dedicated Melat database: npm run db:migrate --workspace server.
 5. Bootstrap the first owner once: npm run db:bootstrap --workspace server. Remove OWNER_INITIAL_PASSWORD from the environment immediately after the account is created.
@@ -47,7 +47,7 @@ Migrations are numbered and recorded in schema_migrations. Run them only against
 ## Backup and restore
 
 1. Create an age public/private key pair. Keep the private identity offline and the public recipient on the server.
-2. Set BACKUP_AGE_RECIPIENT and DATABASE_URL, then run scripts/backup-melat.ps1.
+2. Set BACKUP_AGE_RECIPIENT and DATABASE_URL in the root `.env`, then run scripts/backup-melat.ps1.
 3. Copy the encrypted .dump.age file and its .sha256 file to independent offsite storage. Do not treat a second folder on the same computer as offsite.
 4. For a restore drill, set DATABASE_ADMIN_URL and BACKUP_AGE_IDENTITY_FILE, then run scripts/restore-test-melat.ps1 -EncryptedBackup <file> -RestoreDatabase melat_restore_test.
 5. The restore script refuses any target name other than melat_restore_test and never drops an existing database. Inspect the restored schema and row counts before declaring the drill successful.
