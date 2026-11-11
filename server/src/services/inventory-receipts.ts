@@ -1,4 +1,4 @@
-import type { Pool, PoolClient } from "pg";
+import type { Pool } from "pg";
 
 export interface PostGoodsReceiptInput {
   receiptId: string;
@@ -13,15 +13,12 @@ export interface PostedReceiptResult {
   movementCount: number;
 }
 
-/**
- * Posts a draft goods receipt atomically.
- * Purchase orders never alter stock; only this goods-receipt posting path does.
- */
+/** Posts a draft receipt atomically. Purchase orders never alter stock. */
 export async function postGoodsReceipt(
   pool: Pool,
   input: PostGoodsReceiptInput
 ): Promise<PostedReceiptResult> {
-  if (!input.receiptId || !input.actorId || !input.idempotencyKey) {
+  if (!input.receiptId || !input.actorId || !input.idempotencyKey.trim()) {
     throw new Error("Receipt ID, actor ID and idempotency key are required.");
   }
 
@@ -31,13 +28,9 @@ export async function postGoodsReceipt(
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 
     const prior = await client.query(
-      `SELECT operation, response_body
-         FROM idempotency_keys
-        WHERE key = $1
-        FOR UPDATE`,
+      "SELECT operation, response_body FROM idempotency_keys WHERE key = $1 FOR UPDATE",
       [input.idempotencyKey]
     );
-
     if (prior.rowCount) {
       if (prior.rows[0].operation !== "post_goods_receipt") {
         throw new Error("Idempotency key was already used for a different operation.");
@@ -50,16 +43,12 @@ export async function postGoodsReceipt(
     }
 
     await client.query(
-      `INSERT INTO idempotency_keys(key, operation)
-       VALUES ($1, 'post_goods_receipt')`,
+      "INSERT INTO idempotency_keys(key, operation) VALUES ($1, 'post_goods_receipt')",
       [input.idempotencyKey]
     );
 
     const receiptResult = await client.query(
-      `SELECT id, receipt_number, supplier_id, status
-         FROM goods_receipts
-        WHERE id = $1
-        FOR UPDATE`,
+      "SELECT id, receipt_number, supplier_id, status FROM goods_receipts WHERE id = $1 FOR UPDATE",
       [input.receiptId]
     );
     if (!receiptResult.rowCount) throw new Error("Goods receipt not found.");
@@ -69,7 +58,8 @@ export async function postGoodsReceipt(
     }
 
     const linesResult = await client.query(
-      `SELECT grl.id, grl.product_id, grl.quantity_received, grl.unit_cost,
+      `SELECT grl.id, grl.product_id, grl.quantity_received::text,
+              grl.unit_cost::text, grl.expiry_date,
               p.tracks_expiry, p.is_active
          FROM goods_receipt_lines grl
          JOIN products p ON p.id = grl.product_id
@@ -80,103 +70,82 @@ export async function postGoodsReceipt(
     );
     if (linesResult.rowCount === 0) throw new Error("Cannot post a receipt with no lines.");
 
-    const productIds = [...new Set(linesResult.rows.map((line) => line.product_id))].sort();
-    const lockedBalances = new Map<string, { quantity_on_hand: string; weighted_average_cost: string }>();
-
+    const productIds = [...new Set<string>(linesResult.rows.map((line) => line.product_id))].sort();
     for (const productId of productIds) {
       await client.query(
         `INSERT INTO inventory_balances(product_id, quantity_on_hand, weighted_average_cost)
-         VALUES ($1, 0, 0)
-         ON CONFLICT (product_id) DO NOTHING`,
+         VALUES ($1, 0, 0) ON CONFLICT (product_id) DO NOTHING`,
         [productId]
       );
-      const balance = await client.query(
-        `SELECT quantity_on_hand::text, weighted_average_cost::text
-           FROM inventory_balances
-          WHERE product_id = $1
-          FOR UPDATE`,
+      await client.query(
+        "SELECT product_id FROM inventory_balances WHERE product_id = $1 FOR UPDATE",
         [productId]
       );
-      lockedBalances.set(productId, balance.rows[0]);
     }
 
-    let movementCount = 0;
     for (const line of linesResult.rows) {
       if (!line.is_active) throw new Error(`Product ${line.product_id} is inactive.`);
-      const quantity = String(line.quantity_received);
-      const unitCost = String(line.unit_cost);
-      if (Number(quantity) <= 0 || Number(unitCost) < 0) {
-        throw new Error("Receipt quantities must be positive and costs cannot be negative.");
-      }
-      if (line.tracks_expiry && line.expiry_date === null) {
-        // Expiry is supplied by batch-level receipt metadata in the next receipt-line extension.
+      if (line.tracks_expiry && !line.expiry_date) {
         throw new Error(`Expiry date is required for expiry-tracked product ${line.product_id}.`);
       }
 
-      const current = lockedBalances.get(line.product_id)!;
       const updated = await client.query(
         `UPDATE inventory_balances
             SET weighted_average_cost =
-                  CASE WHEN quantity_on_hand + $2::numeric = 0 THEN 0
-                       ELSE round(((quantity_on_hand * weighted_average_cost) +
-                                    ($2::numeric * $3::numeric)) /
-                                   (quantity_on_hand + $2::numeric), 4)
-                  END,
+                  round(((quantity_on_hand * weighted_average_cost) +
+                         ($2::numeric * $3::numeric)) /
+                        (quantity_on_hand + $2::numeric), 4),
                 quantity_on_hand = quantity_on_hand + $2::numeric,
                 updated_at = now()
           WHERE product_id = $1
+            AND $2::numeric > 0 AND $3::numeric >= 0
           RETURNING quantity_on_hand::text, weighted_average_cost::text`,
-        [line.product_id, quantity, unitCost]
+        [line.product_id, line.quantity_received, line.unit_cost]
       );
-      lockedBalances.set(line.product_id, updated.rows[0]);
+      if (updated.rowCount !== 1) {
+        throw new Error("Receipt quantity must be positive and unit cost cannot be negative.");
+      }
 
       const batch = await client.query(
         `INSERT INTO inventory_batches(
-           product_id, received_at, original_quantity, remaining_quantity,
-           acquisition_unit_cost, supplier_id
-         ) VALUES ($1, now(), $2, $2, $3, $4)
+           product_id, received_at, expiry_date, original_quantity,
+           remaining_quantity, acquisition_unit_cost, supplier_id
+         ) VALUES ($1, now(), $2, $3, $3, $4, $5)
          RETURNING id`,
-        [line.product_id, quantity, unitCost, receipt.supplier_id]
+        [line.product_id, line.expiry_date, line.quantity_received, line.unit_cost, receipt.supplier_id]
       );
 
       await client.query(
-        `UPDATE goods_receipt_lines SET batch_id = $2 WHERE id = $1`,
+        "UPDATE goods_receipt_lines SET batch_id = $2 WHERE id = $1",
         [line.id, batch.rows[0].id]
       );
-
       await client.query(
         `INSERT INTO inventory_movements(
            product_id, batch_id, movement_type, quantity_delta, unit_cost,
            source_type, source_id, actor_id
          ) VALUES ($1, $2, 'receipt', $3, $4, 'goods_receipt', $5, $6)`,
-        [line.product_id, batch.rows[0].id, quantity, unitCost, input.receiptId, input.actorId]
+        [line.product_id, batch.rows[0].id, line.quantity_received, line.unit_cost, input.receiptId, input.actorId]
       );
-      movementCount += 1;
     }
-
-    await client.query(
-      `UPDATE goods_receipts
-          SET status = 'posted', posted_at = now(), posted_by = $2
-        WHERE id = $1`,
-      [input.receiptId, input.actorId]
-    );
 
     const result: PostedReceiptResult = {
       receiptId: input.receiptId,
       status: "posted",
       productCount: productIds.length,
-      movementCount
+      movementCount: linesResult.rowCount
     };
 
+    await client.query(
+      "UPDATE goods_receipts SET status = 'posted', posted_at = now(), posted_by = $2 WHERE id = $1",
+      [input.receiptId, input.actorId]
+    );
     await client.query(
       `INSERT INTO audit_log(actor_id, action, entity_type, entity_id, after_data)
        VALUES ($1, 'post', 'goods_receipt', $2, $3::jsonb)`,
       [input.actorId, input.receiptId, JSON.stringify(result)]
     );
     await client.query(
-      `UPDATE idempotency_keys
-          SET response_status = 200, response_body = $2::jsonb
-        WHERE key = $1`,
+      "UPDATE idempotency_keys SET response_status = 200, response_body = $2::jsonb WHERE key = $1",
       [input.idempotencyKey, JSON.stringify(result)]
     );
 
