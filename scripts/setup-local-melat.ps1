@@ -1,5 +1,11 @@
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$nodeCommand = Get-Command node -ErrorAction SilentlyContinue
+$npmCommand = Get-Command npm -ErrorAction SilentlyContinue
+if (-not $nodeCommand -or -not $npmCommand) { throw "Node.js 22+ and npm are required." }
+$nodeVersion = (node --version).Trim().TrimStart("v")
+$nodeMajor = [int]$nodeVersion.Split(".")[0]
+if ($nodeMajor -lt 22) { throw "Node.js 22 or newer is required; detected $nodeVersion." }
 $envFile = Join-Path $repoRoot "server\.env"
 if (Test-Path $envFile) { throw "server/.env already exists. Refusing to overwrite credentials." }
 $service = Get-Service -Name "postgresql-x64-18" -ErrorAction SilentlyContinue
@@ -14,6 +20,7 @@ $ownerPasswordSecure = Read-Host "Create a unique initial Melat owner password (
 $ownerUsername = Read-Host "Owner username (e.g. owner)"
 $ownerFullName = Read-Host "Owner full name"
 if ($ownerPasswordSecure.Length -lt 16) { throw "Owner password must be at least 16 characters." }
+if ([string]::IsNullOrWhiteSpace($ownerFullName)) { throw "Owner full name is required." }
 if ($ownerUsername -notmatch '^[a-zA-Z0-9._-]{3,80}$') { throw "Owner username format is invalid." }
 $dbPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($dbPasswordSecure)
 $ownerPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ownerPasswordSecure)
