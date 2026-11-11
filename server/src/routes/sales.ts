@@ -39,7 +39,23 @@ export function salesRoutes(pool:Pool){
  router.post("/cash-sessions/:sessionId/movements",allowRoles("owner","manager","cashier"),async(req,res,next)=>{
   const p=z.object({movementType:z.enum(["withdrawal","bank_deposit","cash_addition","cash_drop"]),amount:z.string().regex(/^\\d+(?:\\.\\d{1,4})?$/),reason:z.string().trim().min(4).max(300),reference:z.string().max(100).optional()}).safeParse(req.body);
   if(!p.success)return res.status(400).json({error:"Invalid cash drawer movement."});
-  try{const session=await pool.query("SELECT id FROM cash_sessions WHERE id=$1 AND cashier_id=$2 AND status='open'",[req.params.sessionId,req.user!.id]);if(!session.rowCount)return res.status(409).json({error:"Open cash drawer not found."});const x=await pool.query("INSERT INTO cash_drawer_movements(cash_session_id,movement_type,amount,reason,reference,recorded_by) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",[req.params.sessionId,p.data.movementType,p.data.amount,p.data.reason,p.data.reference??null,req.user!.id]);return res.status(201).json({movement:x.rows[0]});}catch(e){return next(e);}
+  const c=await pool.connect();
+  try{
+   await c.query("BEGIN");
+   const session=await c.query("SELECT id FROM cash_sessions WHERE id=$1 AND cashier_id=$2 AND status='open' FOR UPDATE",[req.params.sessionId,req.user!.id]);
+   if(!session.rowCount)throw new Error("Open cash drawer not found.");
+   const x=await c.query("INSERT INTO cash_drawer_movements(cash_session_id,movement_type,amount,reason,reference,recorded_by) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",[req.params.sessionId,p.data.movementType,p.data.amount,p.data.reason,p.data.reference??null,req.user!.id]);
+   if(p.data.movementType==="bank_deposit"){
+    const accounts=await c.query("SELECT account_code,id FROM chart_of_accounts WHERE account_code IN ('1000','1010')");
+    const cash=accounts.rows.find(a=>a.account_code==="1000")?.id,bank=accounts.rows.find(a=>a.account_code==="1010")?.id;
+    if(!cash||!bank)throw new Error("Cash or bank ledger account is missing.");
+    const entry=await c.query("INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,status,posted_at,posted_by) VALUES($1,CURRENT_DATE,$2,'cash_drawer_movement',$3,'posted',now(),$4) RETURNING id",[`CASHDEP-${x.rows[0].id}`,p.data.reason,x.rows[0].id,req.user!.id]);
+    await c.query("INSERT INTO journal_lines(journal_entry_id,account_id,debit,credit) VALUES($1,$2,$3,0),($1,$4,0,$3)",[entry.rows[0].id,bank,p.data.amount,cash]);
+   }
+   await c.query("INSERT INTO audit_log(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'create','cash_drawer_movement',$2,$3::jsonb)",[req.user!.id,x.rows[0].id,JSON.stringify({type:p.data.movementType,amount:p.data.amount,reason:p.data.reason})]);
+   await c.query("COMMIT");
+   return res.status(201).json({movement:x.rows[0]});
+  }catch(e){await c.query("ROLLBACK");const m=e instanceof Error?e.message:"Cash drawer movement failed.";if(/open cash drawer|ledger account/i.test(m))return res.status(409).json({error:m});return next(e);}finally{c.release();}
  });
  router.post("/cash-sessions/:sessionId/close",allowRoles("owner","manager","cashier"),async(req,res,next)=>{
   const p=z.object({countedCash:z.string().regex(/^\\d+(?:\\.\\d{1,4})?$/)}).safeParse(req.body);if(!p.success)return res.status(400).json({error:"Enter the counted cash amount."});
