@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Pool } from "pg";
 import { postGoodsReceipt } from "../services/inventory-receipts.js";
 import { requireAuth, allowRoles } from "../security/sessions.js";
-import { reverseInventoryMovements } from "../services/reversals.js";
+import { reverseInventoryMovements, reverseJournal } from "../services/reversals.js";
 
 export function inventoryRoutes(pool: Pool) {
   const router = Router();
@@ -123,6 +123,7 @@ export function inventoryRoutes(pool: Pool) {
       const invoice=await client.query("SELECT 1 FROM supplier_invoices WHERE goods_receipt_id=$1 AND status IN ('posted','partially_paid','paid') LIMIT 1",[receipt.rows[0].id]);
       if(invoice.rowCount)throw new Error("Reverse the supplier invoice before reversing its goods receipt.");
       await reverseInventoryMovements(client,req.user!.id,"goods_receipt",receipt.rows[0].id,["receipt"]);
+      await reverseJournal(client,req.user!.id,"goods_receipt",receipt.rows[0].id);
       await client.query("UPDATE goods_receipts SET status='reversed' WHERE id=$1",[receipt.rows[0].id]);
       if(receipt.rows[0].purchase_order_id){
         await client.query(
