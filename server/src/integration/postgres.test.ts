@@ -24,7 +24,7 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     const required=await pool.query("SELECT to_regclass('public.app_sessions') sessions,to_regclass('public.refund_lines') refund_lines,to_regclass('public.bank_reconciliations') bank_reconciliations");
     assert.ok(required.rows[0].sessions);assert.ok(required.rows[0].refund_lines);assert.ok(required.rows[0].bank_reconciliations);
     const accounts=await pool.query("SELECT count(*)::int count FROM chart_of_accounts");
-    assert.ok(accounts.rows[0].count>=14);
+    assert.ok(accounts.rows[0].count>=15);
     const cols=await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='app_users'");
     const names=new Set(cols.rows.map(r=>r.column_name));
     for(const col of ["failed_login_count","locked_until","last_login_at"])assert.ok(names.has(col));
