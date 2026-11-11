@@ -29,6 +29,19 @@ export function inventoryRoutes(pool: Pool) {
     } catch (error) { return next(error); }
   });
 
+  router.get("/batches", allowRoles("owner", "manager", "inventory_clerk"), async (_req, res, next) => {
+    try {
+      const result = await pool.query(
+        `SELECT b.id, b.product_id, p.name_en, p.sku, b.supplier_id, s.name AS supplier_name,
+                b.remaining_quantity::text, b.expiry_date, b.acquisition_unit_cost::text
+           FROM inventory_batches b JOIN products p ON p.id=b.product_id
+           LEFT JOIN suppliers s ON s.id=b.supplier_id
+          WHERE b.remaining_quantity>0 ORDER BY b.expiry_date NULLS LAST,b.received_at LIMIT 500`
+      );
+      return res.json({ batches: result.rows });
+    } catch (error) { return next(error); }
+  });
+
   router.post("/products", allowRoles("owner", "manager", "inventory_clerk"), async (req, res, next) => {
     const schema = z.object({
       sku: z.string().trim().min(1).max(64),
