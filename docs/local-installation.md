@@ -2,70 +2,79 @@
 
 ## Deployment model
 
-The authoritative point-of-sale system runs on the store's local network. The Vercel site is a preview/API deployment only; it is not the store's system of record and must not hold live inventory, customer, supplier or payment data.
+The authoritative point-of-sale system runs on the store's local network. The Vercel site is a visual preview only; it has no configured production database or owner account and must not hold live inventory, supplier, sales or payment data.
 
-The production topology is:
+Production topology:
 - One always-on store computer runs PostgreSQL and the Melat Node API.
-- The API serves the compiled React client on the same host.
-- Cashier and owner devices access the application through the store LAN using the local HTTPS hostname.
-- The PostgreSQL port is never exposed to the LAN or public internet; only the API is reachable by staff devices.
+- The API serves the compiled React client from the same host.
+- Staff devices access the application through the store LAN using a local HTTPS hostname.
+- PostgreSQL port 5432 is never exposed to the LAN or public internet; staff devices reach only the HTTPS reverse proxy.
 
-The POS remains available during an external internet outage only while the local server, LAN, power and database remain operational. It is not a browser-only offline application.
+The POS can tolerate an external internet outage only while the local server, LAN, power and database remain operational. This is not a browser-only offline application.
 
 ## Requirements
 
-- Windows 10/11 or supported Linux server
-- Node.js 22 LTS
-- PostgreSQL 15+ (PostgreSQL 18 target)
-- Caddy reverse proxy for local HTTPS
-- UPS-backed server and router
+- Windows with PostgreSQL 18 and Node.js 22 LTS, or a separately configured supported Linux host
+- Caddy for local HTTPS
+- UPS-backed server and router for store availability
 - age encryption utility and PostgreSQL client tools for encrypted backups
 
-## First-time setup
+## First-time Windows setup
 
-On Windows, the repository includes a guided bootstrap script. From the repository root, run `powershell -ExecutionPolicy Bypass -File .\\scripts\\setup-local-melat.ps1`. It prompts for the existing PostgreSQL application password and a new owner password without printing them, then installs dependencies, builds, applies migrations, creates the first owner and starts the local UI. It writes the `server/.env` file used by both the migration runner and API, and refuses to overwrite an existing `.env`.
+The repository includes a guided setup script. From the repository root, run:
 
-1. Create a dedicated empty PostgreSQL database named melat and a least-privilege role named melat_app.
-2. If configuring manually, copy `.env.example` to the repository-`server/.env`. Set the real DATABASE_URL, owner name and a unique initial owner password. Never commit this file.
-3. From the repository root run npm install, then npm run build.
-4. Apply migrations only to the dedicated Melat database: npm run db:migrate --workspace server.
-5. Bootstrap the first owner once: npm run db:bootstrap --workspace server. Remove OWNER_INITIAL_PASSWORD from the environment immediately after the account is created.
-6. Configure Caddy using deploy/Caddyfile. Map melat.local to the server's LAN IP in the router DNS or each client device. Install Caddy's local root certificate on each trusted device.
-7. Start the API from the repository root with npm run start --workspace server. It serves the UI and API on port 4000. Configure Windows Task Scheduler or a Linux service manager to start it after PostgreSQL.
-8. Allow inbound HTTPS from the store LAN only. Do not expose PostgreSQL port 5432.
-9. Open https://melat.local, sign in as owner and immediately replace the temporary password.
-10. Create staff accounts with least-privilege roles and test a sale/refund/close sequence with training products before loading live stock.
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-local-melat.ps1
+```
 
-## HTTPS and cookies
+It checks the PostgreSQL 18 service, prompts for the existing `melat_app` database password and a new 16+ character owner password, installs dependencies, builds the application, applies migrations, creates the first owner and starts the local application. It writes `server/.env` because workspace scripts load dotenv from the server workspace. It refuses to overwrite an existing `server/.env`.
 
-Caddy terminates TLS and reverse-proxies to 127.0.0.1:4000. Set COOKIE_SECURE=true in the server environment. Do not use plain HTTP for staff logins. The Caddy internal CA root certificate must be trusted on every workstation/tablet that accesses the system.
+Before running it:
+1. Create a dedicated empty PostgreSQL database named `melat` and the least-privilege role `melat_app`. The script does not create or modify database roles and never targets the unrelated `command` database.
+2. Confirm PostgreSQL is accepting connections on localhost:5432.
+3. Ensure npm can reach the package registry. If the network blocks npm, setup stops before database migrations.
+
+For manual setup, copy `server/.env.example` to `server/.env`, replace the database password and owner bootstrap values, then run `npm install`, `npm run build`, `npm run db:migrate --workspace server`, and `npm run db:bootstrap --workspace server` from the repository root. Remove `OWNER_INITIAL_PASSWORD` from the environment immediately after bootstrap.
+
+The guided script starts a localhost-only verification instance over HTTP. This is not the staff LAN deployment. Do not expose it to other devices until Caddy HTTPS, firewall rules and trusted device certificates are configured.
+
+## Staff LAN HTTPS
+
+1. Configure Caddy using `deploy/Caddyfile` and map `melat.local` to the store server's LAN IP using router DNS or each trusted device's hosts file.
+2. Install and trust Caddy's local root certificate on every staff device.
+3. Set `APP_BASE_URL=https://melat.local` and `COOKIE_SECURE=true` in `server/.env`.
+4. Configure the reverse proxy to terminate TLS and proxy to `127.0.0.1:4000`.
+5. Allow inbound HTTPS from the store LAN only. Keep PostgreSQL port 5432 bound to localhost.
+6. Start the API after PostgreSQL using Task Scheduler or a service manager. Open `https://melat.local`.
+7. Sign in as owner, replace the initial password, create least-privilege staff accounts and test checkout/refund/cash-close with training products before loading real stock.
 
 ## Database migrations
 
-Migrations are numbered and recorded in schema_migrations. Run them only against the dedicated Melat database. Back up the database before applying migrations to any database containing business data. Never point the migration runner at the unrelated command database.
+Migrations are numbered and recorded in `schema_migrations`. The CI integration test applies the complete migration chain to an isolated PostgreSQL test database. On the store server, run migrations only against the dedicated Melat database. Take a backup before applying future migrations to a database containing business data.
 
 ## Backup and restore
 
-1. Create an age public/private key pair. Keep the private identity offline and the public recipient on the server.
-2. Set BACKUP_AGE_RECIPIENT and DATABASE_URL in the root `.env`, then run scripts/backup-melat.ps1.
-3. Copy the encrypted .dump.age file and its .sha256 file to independent offsite storage. Do not treat a second folder on the same computer as offsite.
-4. For a restore drill, set DATABASE_ADMIN_URL and BACKUP_AGE_IDENTITY_FILE, then run scripts/restore-test-melat.ps1 -EncryptedBackup <file> -RestoreDatabase melat_restore_test.
-5. The restore script refuses any target name other than melat_restore_test and never drops an existing database. Inspect the restored schema and row counts before declaring the drill successful.
-6. Register the daily 8:00 PM Windows backup task with `powershell -ExecutionPolicy Bypass -File .\\scripts\\register-backup-task.ps1` (the current user must be logged in). Record the drill date, backup age, checksum, table counts and restore duration in the operations log.
+1. Install `age` and create an age public/private key pair. Keep the private identity offline and the public recipient on the server.
+2. Set `BACKUP_AGE_RECIPIENT` and `BACKUP_OFFSITE_DIRECTORY` in `server/.env`, then run `scripts/backup-melat.ps1`.
+3. The script creates a PostgreSQL custom-format dump, encrypts it, writes a SHA-256 checksum and removes the temporary plaintext dump. Configure the offsite directory to an independent protected destination; a second folder on the same computer is not offsite.
+4. Set `DATABASE_ADMIN_URL` and `BACKUP_AGE_IDENTITY_FILE` in `server/.env`, then run `scripts/restore-test-melat.ps1 -EncryptedBackup <file> -RestoreDatabase melat_restore_test`.
+5. The restore script verifies the checksum, decrypts to a temporary file, refuses any target name other than `melat_restore_test`, and never drops an existing database. Inspect the restored schema and row counts.
+6. Register the daily 8:00 PM task using `powershell -ExecutionPolicy Bypass -File .\scripts\register-backup-task.ps1`. Its default security context requires the Windows user to be logged in.
 
-A script is provided; a restore is not considered tested until the store operator has run the drill successfully against a real backup. No backup is created or uploaded by the Vercel preview.
+A restore is not considered tested until a real encrypted backup has been restored successfully on the store server. The scripts are committed; no backup or restore drill has been executed in this remote development session.
 
-## Security
+## Security and operating limits
 
-- Use unique passwords of 16+ characters.
-- Restrict PostgreSQL to localhost.
-- Firewall the API to the trusted LAN and expose it through HTTPS only.
+- Use unique passwords of 16+ characters and restrict database access to localhost.
 - Do not expose the API or database directly to the public internet.
-- Store encryption private keys separately from the backup host.
+- Keep encryption private keys separate from the backup host.
 - Do not use real customer/payment data in preview environments.
+- Reconcile electronic payments against independent CBE, Telebirr and card settlement statements; a pending payment is not money received.
 
 ## Current implementation boundary
 
-The repository now contains API foundations for authentication, products, stock receipts, POS checkout, split tenders, payment verification, receipt printing, cash sessions, cash movements, suppliers, purchase orders, supplier invoices/payments/returns, tax configuration, refunds, stock adjustments, expenses, accounting reports and bank-statement matching.
+The repository contains API and UI foundations for authentication, products, inventory receipts, POS checkout, split tender, payment verification, receipt HTML/printing, purchasing, supplier invoices/payments/returns, cash drawers, refunds, adjustments, accounting journals, tax configuration, financial reports and bank reconciliation.
 
-These modules still require the PostgreSQL integration suite and store acceptance tests to pass. The Vercel deployment does not have a configured production database or owner account. Do not use it for live transactions. The local install and encrypted restore scripts are committed, but the restore drill has not yet been executed.
+The PostgreSQL integration test covers migration installation, WAC receipt valuation, pending electronic tender, FEFO allocation, stock decrement, balanced sale journals and a refund/reversal exercise. It still must run successfully in CI. More acceptance tests and store-side restore/operational drills remain outstanding.
+
+The Vercel preview does not host this Node API or a production database. Login on the Vercel preview is therefore not expected to work. Use the local server only after the guided setup and health check succeed; do not use the preview for real transactions.
