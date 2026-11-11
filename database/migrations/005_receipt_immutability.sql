@@ -26,7 +26,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION melat_prevent_posted_receipt_line_mutation()
 RETURNS trigger LANGUAGE plpgsql AS $$
@@ -45,7 +45,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS goods_receipt_lines_immutable_after_posting ON goods_receipt_lines;
 CREATE TRIGGER goods_receipt_lines_immutable_after_posting
