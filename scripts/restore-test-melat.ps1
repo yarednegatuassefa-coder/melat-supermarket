@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 if ($RestoreDatabase -ne "melat_restore_test") { throw "Restore script only targets isolated database melat_restore_test." }
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$envFile = Join-Path $repoRoot ".env"
+$envFile = Join-Path $repoRoot "server\.env"
 if (Test-Path $envFile) {
   foreach ($line in Get-Content $envFile) {
     if ($line -match '^([A-Z0-9_]+)=(.*)$') {
@@ -15,7 +15,7 @@ if (Test-Path $envFile) {
     }
   }
 }
-if (-not $env:DATABASE_ADMIN_URL) { throw "Set DATABASE_ADMIN_URL in the root .env file." }
+if (-not $env:DATABASE_ADMIN_URL) { throw "Set DATABASE_ADMIN_URL in the server/.env file." }
 if (-not $env:BACKUP_AGE_IDENTITY_FILE) { throw "Set BACKUP_AGE_IDENTITY_FILE in the root .env file." }
 $createdbCommand = Get-Command createdb -ErrorAction SilentlyContinue
 $pgRestoreCommand = Get-Command pg_restore -ErrorAction SilentlyContinue
