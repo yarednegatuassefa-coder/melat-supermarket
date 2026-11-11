@@ -25,8 +25,10 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     const required=await pool.query("SELECT to_regclass('public.app_sessions') sessions,to_regclass('public.refund_lines') refund_lines,to_regclass('public.bank_reconciliations') bank_reconciliations");
     assert.ok(required.rows[0].sessions);assert.ok(required.rows[0].refund_lines);assert.ok(required.rows[0].bank_reconciliations);
     const accounts=await pool.query("SELECT count(*)::int count FROM chart_of_accounts");
-    assert.ok(accounts.rows[0].count>=15);
+    assert.ok(accounts.rows[0].count>=16);
     const grni=await pool.query("SELECT id FROM chart_of_accounts WHERE account_code='2010'");
+    const cashOverShort=await pool.query("SELECT id FROM chart_of_accounts WHERE account_code='5200'");
+    assert.equal(cashOverShort.rowCount,1,"cash over and short account is required for drawer variance posting");
     assert.equal(grni.rowCount,1,"goods received not invoiced account is required for receipt accrual");
     const cols=await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='app_users'");
     const names=new Set(cols.rows.map(r=>r.column_name));
