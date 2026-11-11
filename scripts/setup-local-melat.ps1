@@ -29,6 +29,10 @@ try {
     "DATABASE_URL=postgresql://melat_app:$encodedDbPassword@localhost:5432/melat",
     "DATABASE_SSL=false",
     "DB_POOL_MAX=5",
+    "DATABASE_ADMIN_URL=",
+    "BACKUP_AGE_RECIPIENT=",
+    "BACKUP_OFFSITE_DIRECTORY=",
+    "BACKUP_AGE_IDENTITY_FILE=",
     "OWNER_USERNAME=$ownerUsername",
     "OWNER_FULL_NAME=$ownerFullName",
     "OWNER_INITIAL_PASSWORD=$ownerPassword"
