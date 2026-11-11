@@ -42,7 +42,7 @@ try {
 } finally {
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($dbPtr)
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ownerPtr)
-  $dbPassword = $null; $ownerPassword = $null; $encodedDbPassword = $null
+  $dbPassword = $null; $ownerPassword = $null; $encodedDbPassword = $null; $ownerPasswordBase64 = $null; $ownerFullNameBase64 = $null
 }
 Push-Location $repoRoot
 try {
@@ -54,7 +54,11 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "Database migration failed. Review PostgreSQL errors before retrying." }
   npm run db:bootstrap --workspace server
   if ($LASTEXITCODE -ne 0) { throw "Owner bootstrap failed. Inspect app_users before retrying." }
-  (Get-Content $envFile) -replace '^OWNER_INITIAL_PASSWORD=.*
+  $envLines = Get-Content $envFile
+  $envLines = $envLines -replace '^OWNER_INITIAL_PASSWORD=.*$', 'OWNER_INITIAL_PASSWORD='
+  $envLines = $envLines -replace '^OWNER_INITIAL_PASSWORD_BASE64=.*$', 'OWNER_INITIAL_PASSWORD_BASE64='
+  $envLines = $envLines -replace '^OWNER_FULL_NAME_BASE64=.*$', 'OWNER_FULL_NAME_BASE64='
+  $envLines | Set-Content -Path $envFile -Encoding UTF8
   $proc = Start-Process -FilePath "npm.cmd" -ArgumentList @("run","start","--workspace","server") -WorkingDirectory $repoRoot -PassThru -WindowStyle Hidden
   Start-Sleep -Seconds 3
   try {
