@@ -6,6 +6,7 @@ import helmet from "helmet";
 import { Pool } from "pg";
 import { authRoutes } from "./routes/auth.js";
 import { inventoryRoutes } from "./routes/inventory.js";
+import { salesRoutes } from "./routes/sales.js";
 
 const app = express();
 const pool = process.env.DATABASE_URL ? new Pool({
@@ -40,6 +41,7 @@ app.get("/api/health", async (_req, res) => {
 if (pool) {
   app.use("/api/auth", authRoutes(pool));
   app.use("/api/inventory", inventoryRoutes(pool));
+  app.use("/api/sales", salesRoutes(pool));
 } else {
   app.use("/api", (_req, res) => res.status(503).json({ error: "Melat database is not connected. The store administrator must complete database setup." }));
 }
