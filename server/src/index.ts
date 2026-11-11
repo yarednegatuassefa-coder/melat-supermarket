@@ -1,8 +1,9 @@
 import app from "./app.js";
 
 const port = Number(process.env.PORT ?? 4000);
-const server = app.listen(port, "0.0.0.0", () => {
-  console.log(`Melat API listening on port ${port}`);
+const host = process.env.BIND_HOST ?? "127.0.0.1";
+const server = app.listen(port, host, () => {
+  console.log(`Melat API listening on ${host}:${port}`);
 });
 
 async function shutdown() {
