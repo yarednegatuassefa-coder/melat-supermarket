@@ -36,7 +36,7 @@ try {
   $verify = & $psql "$($builder.Uri.AbsoluteUri)" -tA -F "|" -c "SELECT (SELECT count(*) FROM schema_migrations),(SELECT count(*) FROM app_users),(SELECT count(*) FROM products),(SELECT count(*) FROM sales),(SELECT count(*) FROM journal_entries),(SELECT count(*) FROM information_schema.tables WHERE table_schema='public')"
   if ($LASTEXITCODE -ne 0) { throw "Post-restore verification query failed." }
   $values = $verify.Trim() -split '\\|'
-  if ($values.Count -ne 6 -or [int]$values[0] -lt 11) { throw "Restored database is missing expected Melat migrations or core tables." }
+  if ($values.Count -ne 6 -or [int]$values[0] -lt 12) { throw "Restored database is missing expected Melat migrations or core tables." }
   Write-Output "RESTORE TEST PASSED"
   Write-Output "Migrations: $($values[0]); users: $($values[1]); products: $($values[2]); sales: $($values[3]); journals: $($values[4]); public tables: $($values[5])"
   Write-Output "Inspect the restored database before using it. No production database was modified."
