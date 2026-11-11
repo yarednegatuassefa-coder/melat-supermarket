@@ -4,14 +4,16 @@ param(
 $ErrorActionPreference = "Stop"
 if (-not $env:DATABASE_URL) { throw "DATABASE_URL is required." }
 if (-not $env:BACKUP_AGE_RECIPIENT) { throw "Set BACKUP_AGE_RECIPIENT to an age public recipient. Plaintext backups are not retained." }
-if (-not (Get-Command pg_dump -ErrorAction SilentlyContinue)) { throw "pg_dump is not on PATH. Install PostgreSQL client tools." }
+$pgDumpCommand = Get-Command pg_dump -ErrorAction SilentlyContinue
+$pgDump = if ($pgDumpCommand) { $pgDumpCommand.Source } else { "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" }
+if (-not (Test-Path $pgDump)) { throw "pg_dump.exe was not found. Install PostgreSQL client tools." }
 if (-not (Get-Command age -ErrorAction SilentlyContinue)) { throw "age is required for encrypted backups." }
 New-Item -ItemType Directory -Force -Path $BackupDirectory | Out-Null
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $plain = Join-Path $BackupDirectory "melat-$stamp.dump"
 $encrypted = "$plain.age"
 try {
-  pg_dump --format=custom --no-owner --no-acl --file="$plain" "$env:DATABASE_URL"
+  & $pgDump --format=custom --no-owner --no-acl --file="$plain" "$env:DATABASE_URL"
   if ($LASTEXITCODE -ne 0) { throw "pg_dump failed with exit code $LASTEXITCODE." }
   age --encrypt --recipient $env:BACKUP_AGE_RECIPIENT --output "$encrypted" "$plain"
   if ($LASTEXITCODE -ne 0) { throw "age encryption failed with exit code $LASTEXITCODE." }
