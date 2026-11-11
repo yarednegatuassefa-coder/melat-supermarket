@@ -56,7 +56,7 @@ export function salesRoutes(pool:Pool){
    await c.query("INSERT INTO audit_log(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'create','cash_drawer_movement',$2,$3::jsonb)",[req.user!.id,x.rows[0].id,JSON.stringify({type:p.data.movementType,amount:p.data.amount,reason:p.data.reason})]);
    await c.query("COMMIT");
    return res.status(201).json({movement:x.rows[0]});
-  }catch(e){await c.query("ROLLBACK");const m=e instanceof Error?e.message:"Cash drawer movement failed.";if(/open cash drawer|ledger account/i.test(m))return res.status(409).json({error:m});return next(e);}finally{c.release();}
+  }catch(e){await c.query("ROLLBACK");const m=e instanceof Error?e.message:"Cash drawer movement failed.";if(/open cash drawer|ledger account|cash|drawer|Insufficient/i.test(m))return res.status(409).json({error:m});return next(e);}finally{c.release();}
  });
  router.post("/cash-sessions/:sessionId/close",allowRoles("owner","manager","cashier"),async(req,res,next)=>{
   const p=z.object({countedCash:z.string().regex(/^\\d+(?:\\.\\d{1,4})?$/)}).safeParse(req.body);if(!p.success)return res.status(400).json({error:"Enter the counted cash amount."});
