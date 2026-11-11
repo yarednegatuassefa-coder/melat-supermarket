@@ -7,6 +7,7 @@ import pg from "pg";
 import { randomUUID } from "node:crypto";
 import { postGoodsReceipt } from "../services/inventory-receipts.js";
 import { createSale, finalizeSale } from "../services/sales.js";
+import { reverseInventoryMovements, reverseJournal } from "../services/reversals.js";
 
 const url=process.env.TEST_DATABASE_URL;
 test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()=>{
@@ -58,10 +59,35 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     assert.equal(Number(after.rows[0].qty),18);
     const saleLines=await pool.query("SELECT unit_wac_snapshot::text wac FROM sale_lines WHERE sale_id=$1",[checkout.saleId]);
     assert.equal(Number(saleLines.rows[0].wac),15);
-    const allocation=await pool.query("SELECT b.expiry_date,a.quantity::text qty FROM sale_line_batch_allocations a JOIN inventory_batches b ON b.id=a.batch_id JOIN sale_lines l ON l.id=a.sale_line_id WHERE l.sale_id=$1",[checkout.saleId]);
+    const allocation=await pool.query("SELECT b.id batch_id,b.expiry_date,a.quantity::text qty FROM sale_line_batch_allocations a JOIN inventory_batches b ON b.id=a.batch_id JOIN sale_lines l ON l.id=a.sale_line_id WHERE l.sale_id=$1",[checkout.saleId]);
     assert.equal(allocation.rows.length,1);assert.equal(String(allocation.rows[0].expiry_date).slice(0,10),"2026-12-01");
     const balanced=await pool.query("SELECT round(sum(l.debit-l.credit),4)::text difference FROM journal_lines l JOIN journal_entries e ON e.id=l.journal_entry_id WHERE e.source_type='sale' AND e.source_id=$1",[checkout.saleId]);
     assert.equal(Number(balanced.rows[0].difference),0,"posted sale journal must balance");
+
+    // Refund posting and reversal must restore the original batch and reverse the exact journal.
+    const saleLine=(await pool.query("SELECT * FROM sale_lines WHERE sale_id=$1",[checkout.saleId])).rows[0];
+    const batchId=allocation.rows[0].batch_id;
+    const refundId=(await pool.query("INSERT INTO refunds(refund_number,sale_id,cash_session_id,amount,reason,status,requested_by,approved_by,payment_method,posted_at) VALUES($1,$2,$3,20,'Integration return','posted',$4,$4,'cash',now()) RETURNING id",["ITRF-"+suffix,checkout.saleId,session,user])).rows[0].id;
+    await pool.query("INSERT INTO refund_lines(refund_id,sale_line_id,quantity,amount,restock_condition,inspected_by,inspected_at) VALUES($1,$2,1,20,'restock',$3,now())",[refundId,saleLine.id,user]);
+    await pool.query("UPDATE inventory_batches SET remaining_quantity=remaining_quantity+1 WHERE id=$1",[batchId]);
+    await pool.query("UPDATE inventory_balances SET quantity_on_hand=quantity_on_hand+1 WHERE product_id=$1",[product]);
+    await pool.query("INSERT INTO inventory_movements(product_id,batch_id,movement_type,quantity_delta,unit_cost,source_type,source_id,reason,actor_id) VALUES($1,$2,'customer_return',1,15,'refund',$3,'Integration refund', $4)",[product,batchId,refundId,user]);
+    const revenueAccount=(await pool.query("SELECT id FROM chart_of_accounts WHERE account_code='4000'")).rows[0].id;
+    const cashAccount=(await pool.query("SELECT id FROM chart_of_accounts WHERE account_code='1000'")).rows[0].id;
+    const inventoryAccount=(await pool.query("SELECT id FROM chart_of_accounts WHERE account_code='1100'")).rows[0].id;
+    const cogsAccount=(await pool.query("SELECT id FROM chart_of_accounts WHERE account_code='5000'")).rows[0].id;
+    const refundJournal=(await pool.query("INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,status,posted_at,posted_by) VALUES($1,CURRENT_DATE,'Integration refund','refund',$2,'posted',now(),$3) RETURNING id",["ITRJ-"+suffix,refundId,user])).rows[0].id;
+    await pool.query("INSERT INTO journal_lines(journal_entry_id,account_id,debit,credit) VALUES($1,$2,20,0),($1,$3,0,20),($1,$4,15,0),($1,$5,0,15)",[refundJournal,revenueAccount,cashAccount,inventoryAccount,cogsAccount]);
+    const reverseClient=await pool.connect();
+    try{await reverseClient.query("BEGIN");await reverseInventoryMovements(reverseClient,user,"refund",refundId,["customer_return"]);await reverseJournal(reverseClient,user,"refund",refundId);await reverseClient.query("COMMIT");}catch(error){await reverseClient.query("ROLLBACK");throw error;}finally{reverseClient.release();}
+    const reversedStock=await pool.query("SELECT quantity_on_hand::text qty FROM inventory_balances WHERE product_id=$1",[product]);
+    const reversedBatch=await pool.query("SELECT remaining_quantity::text qty FROM inventory_batches WHERE id=$1",[batchId]);
+    assert.equal(Number(reversedStock.rows[0].qty),18);assert.equal(Number(reversedBatch.rows[0].qty),8);
+    const reversedEntry=await pool.query("SELECT e.status,round(sum(l.debit-l.credit),4)::text difference FROM journal_entries e JOIN journal_lines l ON l.journal_entry_id=e.id WHERE e.id=$1 GROUP BY e.id",[refundJournal]);
+    assert.equal(reversedEntry.rows[0].status,"reversed");assert.equal(Number(reversedEntry.rows[0].difference),0);
+    const reversalJournal=await pool.query("SELECT round(sum(l.debit-l.credit),4)::text difference FROM journal_entries e JOIN journal_lines l ON l.journal_entry_id=e.id WHERE e.reversal_of=$1 GROUP BY e.id",[refundJournal]);
+    assert.equal(Number(reversalJournal.rows[0].difference),0);
+
 
   } finally {await pool.end();}
 });
