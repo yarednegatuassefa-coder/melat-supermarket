@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Pool } from "pg";
 import { postGoodsReceipt } from "../services/inventory-receipts.js";
 import { requireAuth, allowRoles } from "../security/sessions.js";
+import { reverseInventoryMovements } from "../services/reversals.js";
 
 export function inventoryRoutes(pool: Pool) {
   const router = Router();
@@ -110,6 +111,40 @@ export function inventoryRoutes(pool: Pool) {
       if (message.includes("draft") || message.includes("Insufficient") || message.includes("required") || message.includes("no lines")) return res.status(409).json({ error: message });
       return next(error);
     }
+  });
+
+
+  router.post("/receipts/:receiptId/reverse", allowRoles("owner","manager"), async (req,res,next)=>{
+    const client=await pool.connect();
+    try{
+      await client.query("BEGIN");
+      const receipt=await client.query("SELECT * FROM goods_receipts WHERE id=$1 FOR UPDATE",[String(req.params.receiptId)]);
+      if(!receipt.rowCount||receipt.rows[0].status!=="posted")throw new Error("Only a posted goods receipt can be reversed.");
+      const invoice=await client.query("SELECT 1 FROM supplier_invoices WHERE goods_receipt_id=$1 AND status IN ('posted','partially_paid','paid') LIMIT 1",[receipt.rows[0].id]);
+      if(invoice.rowCount)throw new Error("Reverse the supplier invoice before reversing its goods receipt.");
+      await reverseInventoryMovements(client,req.user!.id,"goods_receipt",receipt.rows[0].id,["receipt"]);
+      await client.query("UPDATE goods_receipts SET status='reversed' WHERE id=$1",[receipt.rows[0].id]);
+      if(receipt.rows[0].purchase_order_id){
+        await client.query(
+          `UPDATE purchase_orders po SET status=CASE WHEN EXISTS (
+             SELECT 1 FROM purchase_order_lines pol WHERE pol.purchase_order_id=po.id
+              AND pol.quantity_ordered > COALESCE((SELECT sum(grl.quantity_received)
+                FROM goods_receipt_lines grl JOIN goods_receipts gr ON gr.id=grl.goods_receipt_id
+                WHERE grl.purchase_order_line_id=pol.id AND gr.status='posted'),0)
+           ) THEN CASE WHEN EXISTS (SELECT 1 FROM goods_receipts gr WHERE gr.purchase_order_id=po.id AND gr.status='posted') THEN 'partially_received' ELSE 'approved' END
+           ELSE 'received' END WHERE po.id=$1`,
+          [receipt.rows[0].purchase_order_id]
+        );
+      }
+      await client.query("INSERT INTO audit_log(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'reverse','goods_receipt',$2,$3::jsonb)",[req.user!.id,receipt.rows[0].id,JSON.stringify({receiptNumber:receipt.rows[0].receipt_number})]);
+      await client.query("COMMIT");
+      return res.json({receiptId:receipt.rows[0].id,status:"reversed"});
+    }catch(error){
+      await client.query("ROLLBACK");
+      const message=error instanceof Error?error.message:"Receipt reversal failed.";
+      if(/posted|invoice|stock|batch|inventory/i.test(message))return res.status(409).json({error:message});
+      return next(error);
+    }finally{client.release();}
   });
 
   return router;
