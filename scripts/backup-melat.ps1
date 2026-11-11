@@ -33,7 +33,8 @@ try {
   Remove-Item -Force "$plain"
   if ($env:BACKUP_OFFSITE_DIRECTORY) {
     New-Item -ItemType Directory -Force -Path $env:BACKUP_OFFSITE_DIRECTORY | Out-Null
-    Copy-Item -Force $encrypted,$("$encrypted.sha256") $env:BACKUP_OFFSITE_DIRECTORY
+    $checksumFile = "$encrypted.sha256"
+    Copy-Item -Force -Path @($encrypted,$checksumFile) -Destination $env:BACKUP_OFFSITE_DIRECTORY
     Write-Output "Encrypted backup and checksum copied to offsite storage."
   } else {
     Write-Warning "No offsite destination configured. Copy both encrypted files to independent offsite storage."
