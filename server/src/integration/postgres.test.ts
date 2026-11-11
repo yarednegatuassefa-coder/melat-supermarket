@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { randomUUID } from "node:crypto";
 import { postGoodsReceipt } from "../services/inventory-receipts.js";
-import { createSale, finalizeSale } from "../services/sales.js";
+import { createSale, finalizeSale, releaseSaleReservations } from "../services/sales.js";
 import { reverseInventoryMovements, reverseJournal } from "../services/reversals.js";
 import { assertCashAvailable, expectedCashDrawerBalance } from "../services/cash-drawer.js";
 
@@ -56,8 +56,9 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     const checkout=await createSale(pool,{actorId:user,cashSessionId:session,idempotencyKey:"it-sale-"+suffix,lines:[{productId:product,quantity:"2"}],payments:[{method:"cash",amount:"10"},{method:"cbe",amount:"15",providerReference:"IT-CBE-"+suffix},{method:"telebirr",amount:"15",providerReference:"IT-TB-"+suffix}]});
     assert.equal(checkout.status,"awaiting_payment");
     assert.equal(checkout.pendingPaymentIds.length,2,"each electronic tender must remain independently verifiable");
-    const stillOnHand=await pool.query("SELECT quantity_on_hand::text qty FROM inventory_balances WHERE product_id=$1",[product]);
-    assert.equal(Number(stillOnHand.rows[0].qty),20,"pending electronic tender must not decrement stock");
+    const stillOnHand=await pool.query("SELECT quantity_on_hand::text qty,reserved_quantity::text reserved FROM inventory_balances WHERE product_id=$1",[product]);
+    assert.equal(Number(stillOnHand.rows[0].qty),20,"pending electronic tender must not decrement physical stock");
+    assert.equal(Number(stillOnHand.rows[0].reserved),2,"pending checkout must reserve its sellable stock");
     const client=await pool.connect();
     try{
       await client.query("BEGIN");
@@ -65,14 +66,23 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
       await finalizeSale(client,checkout.saleId,user);
       await client.query("COMMIT");
     }catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}
-    const after=await pool.query("SELECT quantity_on_hand::text qty,weighted_average_cost::text wac FROM inventory_balances WHERE product_id=$1",[product]);
+    const after=await pool.query("SELECT quantity_on_hand::text qty,weighted_average_cost::text wac,reserved_quantity::text reserved FROM inventory_balances WHERE product_id=$1",[product]);
     assert.equal(Number(after.rows[0].qty),18);
+    assert.equal(Number(after.rows[0].reserved),0,"finalized sale must consume its stock reservation");
     const saleLines=await pool.query("SELECT unit_wac_snapshot::text wac FROM sale_lines WHERE sale_id=$1",[checkout.saleId]);
     assert.equal(Number(saleLines.rows[0].wac),15);
     const allocation=await pool.query("SELECT b.id batch_id,b.expiry_date,a.quantity::text qty FROM sale_line_batch_allocations a JOIN inventory_batches b ON b.id=a.batch_id JOIN sale_lines l ON l.id=a.sale_line_id WHERE l.sale_id=$1",[checkout.saleId]);
     assert.equal(allocation.rows.length,1);assert.equal(String(allocation.rows[0].expiry_date).slice(0,10),"2026-12-01");
     const balanced=await pool.query("SELECT round(sum(l.debit-l.credit),4)::text difference FROM journal_lines l JOIN journal_entries e ON e.id=l.journal_entry_id WHERE e.source_type='sale' AND e.source_id=$1",[checkout.saleId]);
     assert.equal(Number(balanced.rows[0].difference),0,"posted sale journal must balance");
+    const abandoned=await createSale(pool,{actorId:user,cashSessionId:session,idempotencyKey:"it-abandon-"+suffix,lines:[{productId:product,quantity:"1"}],payments:[{method:"cbe",amount:"20",providerReference:"IT-ABANDON-"+suffix}]});
+    assert.equal(abandoned.status,"awaiting_payment");
+    const held=await pool.query("SELECT reserved_quantity::text reserved,quantity_on_hand::text qty FROM inventory_balances WHERE product_id=$1",[product]);
+    assert.equal(Number(held.rows[0].reserved),1);assert.equal(Number(held.rows[0].qty),18);
+    const cancelClient=await pool.connect();
+    try{await cancelClient.query("BEGIN");await releaseSaleReservations(cancelClient,abandoned.saleId);await cancelClient.query("UPDATE sale_payments SET status='failed' WHERE sale_id=$1 AND status='pending'",[abandoned.saleId]);await cancelClient.query("UPDATE sales SET status='voided' WHERE id=$1",[abandoned.saleId]);await cancelClient.query("COMMIT");}catch(error){await cancelClient.query("ROLLBACK");throw error;}finally{cancelClient.release();}
+    const released=await pool.query("SELECT reserved_quantity::text reserved,quantity_on_hand::text qty FROM inventory_balances WHERE product_id=$1",[product]);
+    assert.equal(Number(released.rows[0].reserved),0,"cancelling pending checkout must release reserved stock");assert.equal(Number(released.rows[0].qty),18);
 
     // Refund posting and reversal must restore the original batch and reverse the exact journal.
     const saleLine=(await pool.query("SELECT * FROM sale_lines WHERE sale_id=$1",[checkout.saleId])).rows[0];
