@@ -50,14 +50,15 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     assert.equal(Number(before.rows[0].qty),20);assert.equal(Number(before.rows[0].wac),15);
     for(const receiptId of [receipt1,receipt2]){const receiptJournal=await pool.query("SELECT round(sum(l.debit-l.credit),4)::text difference FROM journal_entries e JOIN journal_lines l ON l.journal_entry_id=e.id WHERE e.source_type='goods_receipt' AND e.source_id=$1",[receiptId]);assert.equal(Number(receiptJournal.rows[0].difference),0,"goods receipt must accrue balanced inventory and GRNI");}
 
-    const checkout=await createSale(pool,{actorId:user,cashSessionId:session,idempotencyKey:"it-sale-"+suffix,lines:[{productId:product,quantity:"2"}],payments:[{method:"cash",amount:"10"},{method:"cbe",amount:"30",providerReference:"IT-CBE-"+suffix}]});
+    const checkout=await createSale(pool,{actorId:user,cashSessionId:session,idempotencyKey:"it-sale-"+suffix,lines:[{productId:product,quantity:"2"}],payments:[{method:"cash",amount:"10"},{method:"cbe",amount:"15",providerReference:"IT-CBE-"+suffix},{method:"telebirr",amount:"15",providerReference:"IT-TB-"+suffix}]});
     assert.equal(checkout.status,"awaiting_payment");
+    assert.equal(checkout.pendingPaymentIds.length,2,"each electronic tender must remain independently verifiable");
     const stillOnHand=await pool.query("SELECT quantity_on_hand::text qty FROM inventory_balances WHERE product_id=$1",[product]);
     assert.equal(Number(stillOnHand.rows[0].qty),20,"pending electronic tender must not decrement stock");
     const client=await pool.connect();
     try{
       await client.query("BEGIN");
-      await client.query("UPDATE sale_payments SET status='confirmed',verified_by=$2,verified_at=now() WHERE sale_id=$1 AND method='cbe'",[checkout.saleId,user]);
+      await client.query("UPDATE sale_payments SET status='confirmed',verified_by=$2,verified_at=now() WHERE sale_id=$1 AND method IN ('cbe','telebirr')",[checkout.saleId,user]);
       await finalizeSale(client,checkout.saleId,user);
       await client.query("COMMIT");
     }catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}
