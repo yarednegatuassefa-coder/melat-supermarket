@@ -16,7 +16,7 @@ if (Test-Path $envFile) {
   }
 }
 if (-not $env:DATABASE_ADMIN_URL) { throw "Set DATABASE_ADMIN_URL in the server/.env file." }
-if (-not $env:BACKUP_AGE_IDENTITY_FILE) { throw "Set BACKUP_AGE_IDENTITY_FILE in the root .env file." }
+if (-not $env:BACKUP_AGE_IDENTITY_FILE) { throw "Set BACKUP_AGE_IDENTITY_FILE in the server/.env file." }
 $createdbCommand = Get-Command createdb -ErrorAction SilentlyContinue
 $pgRestoreCommand = Get-Command pg_restore -ErrorAction SilentlyContinue
 $psqlCommand = Get-Command psql -ErrorAction SilentlyContinue
