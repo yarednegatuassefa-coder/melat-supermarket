@@ -14,6 +14,8 @@ export function inventoryRoutes(pool: Pool) {
       const result = await pool.query(
         `SELECT p.id, p.sku, p.barcode, p.name_en, p.name_am, p.base_unit,
                 p.tracks_expiry, p.is_active, COALESCE(b.quantity_on_hand,0)::text AS quantity_on_hand,
+                COALESCE(b.reserved_quantity,0)::text AS reserved_quantity,
+                GREATEST(0,LEAST(COALESCE(b.quantity_on_hand,0)-COALESCE(b.reserved_quantity,0),COALESCE((SELECT sum(ib.remaining_quantity) FROM inventory_batches ib WHERE ib.product_id=p.id AND ib.remaining_quantity>0 AND (ib.expiry_date IS NULL OR ib.expiry_date>=CURRENT_DATE)),0)))::text AS available_to_sell,
                 COALESCE(b.weighted_average_cost,0)::text AS weighted_average_cost,
                 price.selling_price::text AS selling_price
            FROM products p
