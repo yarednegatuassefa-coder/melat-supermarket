@@ -16,8 +16,10 @@ if (Test-Path $envFile) {
 if (-not $env:DATABASE_URL) { throw "DATABASE_URL is required in the server/.env file." }
 if (-not $env:BACKUP_AGE_RECIPIENT) { throw "Set BACKUP_AGE_RECIPIENT in the root .env file. Plaintext backups are not retained." }
 $pgDumpCommand = Get-Command pg_dump -ErrorAction SilentlyContinue
+$pgRestoreCommand = Get-Command pg_restore -ErrorAction SilentlyContinue
 $pgDump = if ($pgDumpCommand) { $pgDumpCommand.Source } else { "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" }
-if (-not (Test-Path $pgDump)) { throw "pg_dump.exe was not found." }
+$pgRestore = if ($pgRestoreCommand) { $pgRestoreCommand.Source } else { "C:\Program Files\PostgreSQL\18\bin\pg_restore.exe" }
+if (-not (Test-Path $pgDump) -or -not (Test-Path $pgRestore)) { throw "pg_dump.exe and pg_restore.exe are required." }
 if (-not (Get-Command age -ErrorAction SilentlyContinue)) { throw "age is required for encrypted backups." }
 New-Item -ItemType Directory -Force -Path $BackupDirectory | Out-Null
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -26,6 +28,8 @@ $encrypted = "$plain.age"
 try {
   & $pgDump --format=custom --no-owner --no-acl --file="$plain" "$env:DATABASE_URL"
   if ($LASTEXITCODE -ne 0) { throw "pg_dump failed with exit code $LASTEXITCODE." }
+  & $pgRestore --list "$plain" *> $null
+  if ($LASTEXITCODE -ne 0) { throw "The generated PostgreSQL dump failed archive validation." }
   age --encrypt --recipient $env:BACKUP_AGE_RECIPIENT --output "$encrypted" "$plain"
   if ($LASTEXITCODE -ne 0) { throw "age encryption failed with exit code $LASTEXITCODE." }
   $hash = (Get-FileHash -Algorithm SHA256 -Path $encrypted).Hash.ToLowerInvariant()
@@ -35,7 +39,8 @@ try {
     New-Item -ItemType Directory -Force -Path $env:BACKUP_OFFSITE_DIRECTORY | Out-Null
     $checksumFile = "$encrypted.sha256"
     Copy-Item -Force -Path @($encrypted,$checksumFile) -Destination $env:BACKUP_OFFSITE_DIRECTORY
-    Write-Output "Encrypted backup and checksum copied to offsite storage."
+    if (-not (Test-Path (Join-Path $env:BACKUP_OFFSITE_DIRECTORY (Split-Path -Leaf $encrypted))) -or -not (Test-Path (Join-Path $env:BACKUP_OFFSITE_DIRECTORY (Split-Path -Leaf $checksumFile)))) { throw "Offsite backup copy verification failed." }
+    Write-Output "Encrypted backup and checksum copied to offsite storage and verified."
   } else {
     Write-Warning "No offsite destination configured. Copy both encrypted files to independent offsite storage."
   }
