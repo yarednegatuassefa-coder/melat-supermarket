@@ -11,6 +11,7 @@ INSERT INTO chart_of_accounts(account_code, name_en, name_am, account_type) VALU
 ('1100','Inventory','እቃ ክምችት','asset'),
 ('1200','Recoverable input tax','የሚመለስ የግብር መጠን','asset'),
 ('2000','Accounts payable','የአቅራቢ ዕዳ','liability'),
+('2010','Goods received not invoiced','የተቀበሉ ግን ያልተከፈሉ ዕቃዎች','liability'),
 ('2100','Output tax payable','የሚከፈል የግብር መጠን','liability'),
 ('3000','Owner capital','የባለቤት ካፒታል','equity'),
 ('4000','Sales revenue','የሽያጭ ገቢ','revenue'),
