@@ -23,6 +23,8 @@ The POS remains available during an external internet outage only while the loca
 
 ## First-time setup
 
+On Windows, the repository includes a guided bootstrap script. From the repository root, run `powershell -ExecutionPolicy Bypass -File .\\scripts\\setup-local-melat.ps1`. It prompts for the existing PostgreSQL application password and a new owner password without printing them, then installs dependencies, builds, applies migrations, creates the first owner and starts the local UI. It refuses to overwrite an existing `server/.env`.
+
 1. Create a dedicated empty PostgreSQL database named melat and a least-privilege role named melat_app.
 2. Copy server/.env.example to server/.env. Set the real DATABASE_URL, owner name and a unique initial owner password. Never commit this file.
 3. From the repository root run npm install, then npm run build.
@@ -49,7 +51,7 @@ Migrations are numbered and recorded in schema_migrations. Run them only against
 3. Copy the encrypted .dump.age file and its .sha256 file to independent offsite storage. Do not treat a second folder on the same computer as offsite.
 4. For a restore drill, set DATABASE_ADMIN_URL and BACKUP_AGE_IDENTITY_FILE, then run scripts/restore-test-melat.ps1 -EncryptedBackup <file> -RestoreDatabase melat_restore_test.
 5. The restore script refuses any target name other than melat_restore_test and never drops an existing database. Inspect the restored schema and row counts before declaring the drill successful.
-6. Record the drill date, backup age, checksum, table counts and restore duration in the operations log.
+6. Register the daily 8:00 PM Windows backup task with `powershell -ExecutionPolicy Bypass -File .\\scripts\\register-backup-task.ps1` (the current user must be logged in). Record the drill date, backup age, checksum, table counts and restore duration in the operations log.
 
 A script is provided; a restore is not considered tested until the store operator has run the drill successfully against a real backup. No backup is created or uploaded by the Vercel preview.
 
