@@ -48,7 +48,7 @@ export async function postGoodsReceipt(
     );
 
     const receiptResult = await client.query(
-      "SELECT id, receipt_number, supplier_id, status FROM goods_receipts WHERE id = $1 FOR UPDATE",
+      "SELECT id, receipt_number, supplier_id, purchase_order_id, status FROM goods_receipts WHERE id = $1 FOR UPDATE",
       [input.receiptId]
     );
     if (!receiptResult.rowCount) throw new Error("Goods receipt not found.");
