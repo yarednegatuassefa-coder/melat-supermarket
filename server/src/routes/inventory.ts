@@ -89,7 +89,7 @@ export function inventoryRoutes(pool: Pool) {
     try {
       const parsed = z.object({ idempotencyKey: z.string().trim().min(12).max(200) }).safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ error: "A unique idempotency key is required." });
-      const result = await postGoodsReceipt(pool, { receiptId: req.params.receiptId, actorId: req.user!.id, idempotencyKey: parsed.data.idempotencyKey });
+      const result = await postGoodsReceipt(pool, { receiptId: String(req.params.receiptId), actorId: req.user!.id, idempotencyKey: parsed.data.idempotencyKey });
       return res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to post receipt.";
