@@ -3,7 +3,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$envFile = Join-Path $repoRoot ".env"
+$envFile = Join-Path $repoRoot "server\.env"
 if (Test-Path $envFile) {
   foreach ($line in Get-Content $envFile) {
     if ($line -match '^([A-Z0-9_]+)=(.*)$') {
@@ -13,7 +13,7 @@ if (Test-Path $envFile) {
     }
   }
 }
-if (-not $env:DATABASE_URL) { throw "DATABASE_URL is required in the root .env file." }
+if (-not $env:DATABASE_URL) { throw "DATABASE_URL is required in the server/.env file." }
 if (-not $env:BACKUP_AGE_RECIPIENT) { throw "Set BACKUP_AGE_RECIPIENT in the root .env file. Plaintext backups are not retained." }
 $pgDumpCommand = Get-Command pg_dump -ErrorAction SilentlyContinue
 $pgDump = if ($pgDumpCommand) { $pgDumpCommand.Source } else { "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" }
