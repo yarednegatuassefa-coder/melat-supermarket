@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { postGoodsReceipt } from "../services/inventory-receipts.js";
 import { createSale, finalizeSale } from "../services/sales.js";
 import { reverseInventoryMovements, reverseJournal } from "../services/reversals.js";
+import { assertCashAvailable, expectedCashDrawerBalance } from "../services/cash-drawer.js";
 
 const url=process.env.TEST_DATABASE_URL;
 test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()=>{
@@ -94,6 +95,14 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     assert.equal(reversedEntry.rows[0].status,"reversed");assert.equal(Number(reversedEntry.rows[0].difference),0);
     const reversalJournal=await pool.query("SELECT round(sum(l.debit-l.credit),4)::text difference FROM journal_entries e JOIN journal_lines l ON l.journal_entry_id=e.id WHERE e.reversal_of=$1 GROUP BY e.id",[refundJournal]);
     assert.equal(Number(reversalJournal.rows[0].difference),0);
+    await pool.query("UPDATE refunds SET status='reversed' WHERE id=$1",[refundId]);
+    const drawerClient=await pool.connect();
+    try{
+      const expected=await expectedCashDrawerBalance(drawerClient,session);
+      assert.equal(expected,110,"drawer should contain opening float plus confirmed cash tender after refund reversal");
+      await assertCashAvailable(drawerClient,session,"110");
+      await assert.rejects(()=>assertCashAvailable(drawerClient,session,"111"),/Insufficient cash in drawer/);
+    }finally{drawerClient.release();}
 
 
   } finally {await pool.end();}
