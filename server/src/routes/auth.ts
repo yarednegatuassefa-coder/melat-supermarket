@@ -54,6 +54,15 @@ export function authRoutes(pool: Pool) {
 
   router.get("/me", requireAuth(pool), (req, res) => res.json({ user: req.user }));
 
+  router.get("/users", requireAuth(pool), allowRoles("owner"), async (_req, res, next) => {
+    try {
+      const result = await pool.query(
+        "SELECT id, username, full_name, role, is_active, created_at, last_login_at FROM app_users ORDER BY created_at"
+      );
+      return res.json({ users: result.rows });
+    } catch (error) { return next(error); }
+  });
+
   router.post("/users", requireAuth(pool), allowRoles("owner"), async (req, res, next) => {
     try {
       const parsed = createUserSchema.safeParse(req.body);
