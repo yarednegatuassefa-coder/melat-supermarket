@@ -14,7 +14,7 @@ if (Test-Path $envFile) {
   }
 }
 if (-not $env:DATABASE_URL) { throw "DATABASE_URL is required in the server/.env file." }
-if (-not $env:BACKUP_AGE_RECIPIENT) { throw "Set BACKUP_AGE_RECIPIENT in the root .env file. Plaintext backups are not retained." }
+if (-not $env:BACKUP_AGE_RECIPIENT) { throw "Set BACKUP_AGE_RECIPIENT in server/.env. Plaintext backups are not retained." }
 $pgDumpCommand = Get-Command pg_dump -ErrorAction SilentlyContinue
 $pgRestoreCommand = Get-Command pg_restore -ErrorAction SilentlyContinue
 $pgDump = if ($pgDumpCommand) { $pgDumpCommand.Source } else { "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" }
@@ -39,7 +39,9 @@ try {
     New-Item -ItemType Directory -Force -Path $env:BACKUP_OFFSITE_DIRECTORY | Out-Null
     $checksumFile = "$encrypted.sha256"
     Copy-Item -Force -Path @($encrypted,$checksumFile) -Destination $env:BACKUP_OFFSITE_DIRECTORY
-    if (-not (Test-Path (Join-Path $env:BACKUP_OFFSITE_DIRECTORY (Split-Path -Leaf $encrypted))) -or -not (Test-Path (Join-Path $env:BACKUP_OFFSITE_DIRECTORY (Split-Path -Leaf $checksumFile)))) { throw "Offsite backup copy verification failed." }
+    $offsiteEncrypted = Join-Path $env:BACKUP_OFFSITE_DIRECTORY (Split-Path -Leaf $encrypted)
+    $offsiteHash = (Get-FileHash -Algorithm SHA256 -Path $offsiteEncrypted).Hash.ToLowerInvariant()
+    if ($offsiteHash -ne $hash -or -not (Test-Path (Join-Path $env:BACKUP_OFFSITE_DIRECTORY (Split-Path -Leaf $checksumFile)))) { throw "Offsite backup copy verification failed." }
     Write-Output "Encrypted backup and checksum copied to offsite storage and verified."
   } else {
     Write-Warning "No offsite destination configured. Copy both encrypted files to independent offsite storage."
