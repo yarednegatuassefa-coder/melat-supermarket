@@ -132,7 +132,7 @@ export async function postGoodsReceipt(
       receiptId: input.receiptId,
       status: "posted",
       productCount: productIds.length,
-      movementCount: linesResult.rowCount
+      movementCount: linesResult.rowCount ?? 0
     };
 
     await client.query(
