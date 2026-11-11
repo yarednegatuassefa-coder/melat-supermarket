@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-type Product={id:string;sku:string;name_en:string;quantity_on_hand:string;selling_price:string|null;base_unit:string};
+type Product={id:string;sku:string;name_en:string;quantity_on_hand:string;available_to_sell?:string;reserved_quantity?:string;selling_price:string|null;base_unit:string};
 type Supplier={id:string;supplier_code:string;name:string};
 type Session={id:string;session_number:string};
 type TaxRate={id:string;name:string;rate:string};
