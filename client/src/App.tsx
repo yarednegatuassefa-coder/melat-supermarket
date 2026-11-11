@@ -1,4 +1,5 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { FormEvent } from "react";
 
 type User = { id: string; username: string; fullName: string; role: "owner" | "manager" | "cashier" | "inventory_clerk"; mustChangePassword: boolean };
 type Product = { id: string; sku: string; barcode: string | null; name_en: string; name_am: string | null; base_unit: string; tracks_expiry: boolean; quantity_on_hand: string; weighted_average_cost: string; selling_price: string | null };
