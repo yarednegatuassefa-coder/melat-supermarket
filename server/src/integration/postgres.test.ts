@@ -33,8 +33,8 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     const cols=await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='app_users'");
     const names=new Set(cols.rows.map(r=>r.column_name));
     for(const col of ["failed_login_count","locked_until","last_login_at"])assert.ok(names.has(col));
-    const workflowColumns=await pool.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND (table_name,column_name) IN (('goods_receipt_lines','purchase_order_line_id'),('supplier_invoices','tax_rate_id'),('supplier_invoices','tax_recoverable'),('bank_reconciliations','statement_start_date'),('refunds','posted_at'),('refunds','reversed_at'),('supplier_payments','cash_session_id'),('expenses','status'),('expenses','reversed_at'))");
-    assert.equal(workflowColumns.rows.length,9,"required purchasing, tax, bank and refund workflow columns are missing");
+    const workflowColumns=await pool.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND (table_name,column_name) IN (('goods_receipt_lines','purchase_order_line_id'),('supplier_invoices','tax_rate_id'),('supplier_invoices','tax_recoverable'),('bank_reconciliations','statement_start_date'),('refunds','posted_at'),('refunds','reversed_at'),('supplier_payments','cash_session_id'),('expenses','status'),('expenses','reversed_at'),('inventory_balances','reserved_quantity'))");
+    assert.equal(workflowColumns.rows.length,10,"required purchasing, tax, bank and refund workflow columns are missing");
 
     // End-to-end PostgreSQL exercise: weighted-average receipts, pending split tender,
     // FEFO allocation, inventory decrement and balanced double-entry posting.
