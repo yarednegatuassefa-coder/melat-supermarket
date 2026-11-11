@@ -25,6 +25,8 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     assert.ok(required.rows[0].sessions);assert.ok(required.rows[0].refund_lines);assert.ok(required.rows[0].bank_reconciliations);
     const accounts=await pool.query("SELECT count(*)::int count FROM chart_of_accounts");
     assert.ok(accounts.rows[0].count>=15);
+    const grni=await pool.query("SELECT id FROM chart_of_accounts WHERE account_code='2010'");
+    assert.equal(grni.rowCount,1,"goods received not invoiced account is required for receipt accrual");
     const cols=await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='app_users'");
     const names=new Set(cols.rows.map(r=>r.column_name));
     for(const col of ["failed_login_count","locked_until","last_login_at"])assert.ok(names.has(col));
