@@ -21,6 +21,8 @@ try {
   $dbPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($dbPtr)
   $ownerPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ownerPtr)
   $encodedDbPassword = [Uri]::EscapeDataString($dbPassword)
+  $ownerPasswordEnv = '"' + $ownerPassword.Replace('\\','\\\\').Replace('"','\\"') + '"'
+  $ownerFullNameEnv = '"' + $ownerFullName.Replace('\\','\\\\').Replace('"','\\"') + '"'
   @(
     "NODE_ENV=production",
     "PORT=4000",
@@ -34,8 +36,8 @@ try {
     "BACKUP_OFFSITE_DIRECTORY=",
     "BACKUP_AGE_IDENTITY_FILE=",
     "OWNER_USERNAME=$ownerUsername",
-    "OWNER_FULL_NAME=$ownerFullName",
-    "OWNER_INITIAL_PASSWORD=$ownerPassword"
+    "OWNER_FULL_NAME=$ownerFullNameEnv",
+    "OWNER_INITIAL_PASSWORD=$ownerPasswordEnv"
   ) | Set-Content -Path $envFile -Encoding UTF8
 } finally {
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($dbPtr)
