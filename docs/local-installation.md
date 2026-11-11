@@ -23,10 +23,10 @@ The POS remains available during an external internet outage only while the loca
 
 ## First-time setup
 
-On Windows, the repository includes a guided bootstrap script. From the repository root, run `powershell -ExecutionPolicy Bypass -File .\\scripts\\setup-local-melat.ps1`. It prompts for the existing PostgreSQL application password and a new owner password without printing them, then installs dependencies, builds, applies migrations, creates the first owner and starts the local UI. It writes the root `.env` file used by both the migration runner and API, and refuses to overwrite an existing `.env`.
+On Windows, the repository includes a guided bootstrap script. From the repository root, run `powershell -ExecutionPolicy Bypass -File .\\scripts\\setup-local-melat.ps1`. It prompts for the existing PostgreSQL application password and a new owner password without printing them, then installs dependencies, builds, applies migrations, creates the first owner and starts the local UI. It writes the `server/.env` file used by both the migration runner and API, and refuses to overwrite an existing `.env`.
 
 1. Create a dedicated empty PostgreSQL database named melat and a least-privilege role named melat_app.
-2. If configuring manually, copy `.env.example` to the repository-root `.env`. Set the real DATABASE_URL, owner name and a unique initial owner password. Never commit this file.
+2. If configuring manually, copy `.env.example` to the repository-`server/.env`. Set the real DATABASE_URL, owner name and a unique initial owner password. Never commit this file.
 3. From the repository root run npm install, then npm run build.
 4. Apply migrations only to the dedicated Melat database: npm run db:migrate --workspace server.
 5. Bootstrap the first owner once: npm run db:bootstrap --workspace server. Remove OWNER_INITIAL_PASSWORD from the environment immediately after the account is created.
