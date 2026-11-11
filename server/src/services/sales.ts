@@ -71,8 +71,11 @@ export async function finalizeSale(client: PoolClient, saleId: string, actorId: 
       );
     }
     const balance=await client.query(
-      `UPDATE inventory_balances SET quantity_on_hand=quantity_on_hand-$2,updated_at=now()
-        WHERE product_id=$1 AND quantity_on_hand >= $2 RETURNING weighted_average_cost::text`,
+      `UPDATE inventory_balances
+           SET quantity_on_hand=quantity_on_hand-$2,
+               weighted_average_cost=CASE WHEN quantity_on_hand-$2 <= 0.00005 THEN 0 ELSE weighted_average_cost END,
+               updated_at=now()
+         WHERE product_id=$1 AND quantity_on_hand >= $2 RETURNING weighted_average_cost::text`,
       [line.product_id,line.quantity]
     );
     if(!balance.rowCount) throw new Error("Inventory balance is insufficient or inconsistent.");
