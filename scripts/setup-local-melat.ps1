@@ -22,7 +22,7 @@ try {
   $ownerPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ownerPtr)
   $encodedDbPassword = [Uri]::EscapeDataString($dbPassword)
   $ownerPasswordEnv = '"' + $ownerPassword.Replace('\','\\').Replace('"','\\"') + '"'
-  $ownerFullNameEnv = '"' + $ownerFullName.Replace('\\','\\\\').Replace('"','\\"') + '"'
+  $ownerFullNameEnv = '"' + $ownerFullName.Replace('\','\\').Replace('"','\\"') + '"'
   @(
     "NODE_ENV=production",
     "PORT=4000",
