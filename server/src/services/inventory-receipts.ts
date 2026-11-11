@@ -139,6 +139,18 @@ export async function postGoodsReceipt(
       "UPDATE goods_receipts SET status = 'posted', posted_at = now(), posted_by = $2 WHERE id = $1",
       [input.receiptId, input.actorId]
     );
+    if (receipt.purchase_order_id) {
+      await client.query(
+        `UPDATE purchase_orders po SET status = CASE WHEN EXISTS (
+           SELECT 1 FROM purchase_order_lines pol WHERE pol.purchase_order_id=po.id
+             AND pol.quantity_ordered > COALESCE((SELECT sum(grl.quantity_received)
+               FROM goods_receipt_lines grl JOIN goods_receipts gr ON gr.id=grl.goods_receipt_id
+               WHERE grl.purchase_order_line_id=pol.id AND gr.status='posted'),0)
+         ) THEN 'partially_received' ELSE 'received' END
+         WHERE po.id=$1 AND po.status IN ('approved','partially_received')`,
+        [receipt.purchase_order_id]
+      );
+    }
     await client.query(
       `INSERT INTO audit_log(actor_id, action, entity_type, entity_id, after_data)
        VALUES ($1, 'post', 'goods_receipt', $2, $3::jsonb)`,
