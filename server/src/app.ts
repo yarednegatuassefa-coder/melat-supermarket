@@ -2,6 +2,9 @@ import "dotenv/config";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import express from "express";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import helmet from "helmet";
 import { Pool } from "pg";
 import { authRoutes } from "./routes/auth.js";
@@ -48,6 +51,16 @@ if (pool) {
   app.use("/api/finance", financeRoutes(pool));
 } else {
   app.use("/api", (_req, res) => res.status(503).json({ error: "Melat database is not connected. The store administrator must complete database setup." }));
+}
+
+const clientDist = join(dirname(fileURLToPath(import.meta.url)), "../../client/dist");
+if (existsSync(clientDist)) {
+  app.use(express.static(clientDist, { index: false, maxAge: process.env.NODE_ENV === "production" ? "1h" : 0 }));
+  app.get(/^(?!\\/api(?:\\/|$)).*/, (_req, res, next) => {
+    const indexFile = join(clientDist, "index.html");
+    if (existsSync(indexFile)) return res.sendFile(indexFile);
+    return next();
+  });
 }
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
