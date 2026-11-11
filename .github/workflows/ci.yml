@@ -29,8 +29,6 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - name: Apply migrations to isolated CI database
-        run: npm run db:migrate --workspace server
       - name: Run domain and PostgreSQL integration tests
         run: npm test
       - name: Build API and client
