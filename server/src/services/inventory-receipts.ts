@@ -139,6 +139,25 @@ export async function postGoodsReceipt(
       "UPDATE goods_receipts SET status = 'posted', posted_at = now(), posted_by = $2 WHERE id = $1",
       [input.receiptId, input.actorId]
     );
+    const receiptValue = linesResult.rows.reduce(
+      (sum, line) => sum + Number(line.quantity_received) * Number(line.unit_cost), 0
+    );
+    const ledgerAccounts = await client.query(
+      "SELECT account_code,id FROM chart_of_accounts WHERE account_code IN ('1100','2010')"
+    );
+    const inventoryAccount = ledgerAccounts.rows.find((row) => row.account_code === "1100")?.id;
+    const grniAccount = ledgerAccounts.rows.find((row) => row.account_code === "2010")?.id;
+    if (!inventoryAccount || !grniAccount) throw new Error("Inventory or GRNI ledger account is missing.");
+    const journal = await client.query(
+      `INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,status,posted_at,posted_by)
+       VALUES($1,CURRENT_DATE,$2,'goods_receipt',$3,'posted',now(),$4) RETURNING id`,
+      [`GRN-${receipt.receipt_number}`, `Goods received ${receipt.receipt_number}`, input.receiptId, input.actorId]
+    );
+    await client.query(
+      `INSERT INTO journal_lines(journal_entry_id,account_id,debit,credit,description)
+       VALUES($1,$2,$3,0,'Inventory received'),($1,$4,0,$3,'Goods received not invoiced')`,
+      [journal.rows[0].id, inventoryAccount, receiptValue.toFixed(4), grniAccount]
+    );
     if (receipt.purchase_order_id) {
       await client.query(
         `UPDATE purchase_orders po SET status = CASE WHEN EXISTS (
