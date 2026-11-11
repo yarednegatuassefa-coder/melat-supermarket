@@ -26,6 +26,7 @@ try {
   @(
     "NODE_ENV=production",
     "PORT=4000",
+    "BIND_HOST=127.0.0.1",
     "APP_BASE_URL=http://localhost:4000",
     "COOKIE_SECURE=false",
     "DATABASE_URL=postgresql://melat_app:$encodedDbPassword@localhost:5432/melat",
