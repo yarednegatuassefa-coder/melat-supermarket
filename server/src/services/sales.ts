@@ -26,6 +26,15 @@ async function journal(client: PoolClient, args: { number:string; date:string; d
   return entry.rows[0].id as string;
 }
 
+export async function releaseSaleReservations(client:PoolClient,saleId:string){
+ const lines=await client.query("SELECT product_id,sum(quantity)::text quantity FROM sale_lines WHERE sale_id=$1 GROUP BY product_id ORDER BY product_id",[saleId]);
+ for(const line of lines.rows){
+  const released=await client.query("UPDATE inventory_balances SET reserved_quantity=reserved_quantity-$2,updated_at=now() WHERE product_id=$1 AND reserved_quantity >= $2 RETURNING product_id",[line.product_id,line.quantity]);
+  if(!released.rowCount)throw new Error("Checkout stock reservation is missing or inconsistent.");
+ }
+ return lines.rowCount??0;
+}
+
 export async function finalizeSale(client: PoolClient, saleId: string, actorId: string) {
   const saleResult=await client.query("SELECT * FROM sales WHERE id=$1 FOR UPDATE",[saleId]);
   if(!saleResult.rowCount) throw new Error("Sale not found.");
