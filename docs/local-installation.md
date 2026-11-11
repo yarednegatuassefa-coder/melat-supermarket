@@ -43,9 +43,9 @@ The guided script starts a localhost-only verification instance over HTTP. This 
 1. Configure Caddy using `deploy/Caddyfile` and map `melat.local` to the store server's LAN IP using router DNS or each trusted device's hosts file.
 2. Install and trust Caddy's local root certificate on every staff device.
 3. Set `APP_BASE_URL=https://melat.local` and `COOKIE_SECURE=true` in `server/.env`.
-4. Configure the reverse proxy to terminate TLS and proxy to `127.0.0.1:4000`.
-5. Allow inbound HTTPS from the store LAN only. Keep PostgreSQL port 5432 bound to localhost.
-6. Start the API after PostgreSQL using Task Scheduler or a service manager. Open `https://melat.local`.
+4. The Node API binds to `127.0.0.1:4000`; configure Caddy to terminate TLS and proxy to that loopback address. Do not change `BIND_HOST` to a LAN interface.
+5. Set the Windows network profile to Private. From an elevated PowerShell window, run `scripts/configure-lan-firewall.ps1`; this blocks inbound ports 4000 and 5432 and allows HTTPS only from the local subnet on Private/Domain profiles.
+6. Register automatic API startup with `powershell -ExecutionPolicy Bypass -File .\\scripts\\register-local-api-task.ps1`. The task starts after the configured Windows user signs in and waits for PostgreSQL. Open `https://melat.local`.
 7. Sign in as owner, replace the initial password, create least-privilege staff accounts and test checkout/refund/cash-close with training products before loading real stock.
 
 ## Database migrations
