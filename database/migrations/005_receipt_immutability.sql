@@ -4,7 +4,7 @@ BEGIN;
 CREATE OR REPLACE FUNCTION melat_prevent_posted_receipt_mutation()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF OLD.status = 'posted' THEN
+  IF OLD.status IN ('posted', 'reversed') THEN
     IF TG_OP = 'UPDATE'
        AND NEW.status = 'reversed'
        AND NEW.id = OLD.id
@@ -21,9 +21,12 @@ BEGIN
     RAISE EXCEPTION 'Posted goods receipts are immutable; use the controlled reversal workflow'
       USING ERRCODE = '55000';
   END IF;
-  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
-$$;
+$;
 
 CREATE OR REPLACE FUNCTION melat_prevent_posted_receipt_line_mutation()
 RETURNS trigger LANGUAGE plpgsql AS $$
@@ -33,13 +36,16 @@ DECLARE
 BEGIN
   parent_id := CASE WHEN TG_OP = 'DELETE' THEN OLD.goods_receipt_id ELSE NEW.goods_receipt_id END;
   SELECT status INTO parent_status FROM goods_receipts WHERE id = parent_id;
-  IF parent_status = 'posted' THEN
+  IF parent_status IS DISTINCT FROM 'draft' THEN
     RAISE EXCEPTION 'Lines belonging to a posted goods receipt are immutable'
       USING ERRCODE = '55000';
   END IF;
-  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
-$$;
+$;
 
 DROP TRIGGER IF EXISTS goods_receipt_lines_immutable_after_posting ON goods_receipt_lines;
 CREATE TRIGGER goods_receipt_lines_immutable_after_posting
