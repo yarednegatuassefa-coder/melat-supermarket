@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "test": "tsx --test src/domain/*.test.ts",
+    "test": "tsx --test src/domain/*.test.ts src/integration/*.test.ts",
     "db:migrate": "node scripts/migrate.mjs",
     "db:bootstrap": "tsx scripts/bootstrap-owner.ts"
   },
