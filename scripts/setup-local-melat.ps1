@@ -21,8 +21,8 @@ try {
   $dbPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($dbPtr)
   $ownerPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ownerPtr)
   $encodedDbPassword = [Uri]::EscapeDataString($dbPassword)
-  $ownerPasswordEnv = '"' + $ownerPassword.Replace('\','\\').Replace('"','\\"') + '"'
-  $ownerFullNameEnv = '"' + $ownerFullName.Replace('\','\\').Replace('"','\\"') + '"'
+  $ownerPasswordBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($ownerPassword))
+  $ownerFullNameBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($ownerFullName))
   @(
     "NODE_ENV=production",
     "PORT=4000",
