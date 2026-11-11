@@ -56,7 +56,8 @@ if (pool) {
 const clientDist = join(dirname(fileURLToPath(import.meta.url)), "../../client/dist");
 if (existsSync(clientDist)) {
   app.use(express.static(clientDist, { index: false, maxAge: process.env.NODE_ENV === "production" ? "1h" : 0 }));
-  app.get(/^(?!\\/api(?:\\/|$)).*/, (_req, res, next) => {
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path === "/api" || req.path.startsWith("/api/")) return next();
     const indexFile = join(clientDist, "index.html");
     if (existsSync(indexFile)) return res.sendFile(indexFile);
     return next();
