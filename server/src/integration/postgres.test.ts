@@ -24,7 +24,7 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     const required=await pool.query("SELECT to_regclass('public.app_sessions') sessions,to_regclass('public.refund_lines') refund_lines,to_regclass('public.bank_reconciliations') bank_reconciliations");
     assert.ok(required.rows[0].sessions);assert.ok(required.rows[0].refund_lines);assert.ok(required.rows[0].bank_reconciliations);
     const accounts=await pool.query("SELECT count(*)::int count FROM chart_of_accounts");
-    assert.ok(accounts.rows[0].count>=14);
+    assert.ok(accounts.rows[0].count>=15);
     const cols=await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='app_users'");
     const names=new Set(cols.rows.map(r=>r.column_name));
     for(const col of ["failed_login_count","locked_until","last_login_at"])assert.ok(names.has(col));
@@ -44,6 +44,8 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     await postGoodsReceipt(pool,{receiptId:receipt2,actorId:user,idempotencyKey:"it-receipt-2-"+suffix});
     const before=await pool.query("SELECT quantity_on_hand::text qty,weighted_average_cost::text wac FROM inventory_balances WHERE product_id=$1",[product]);
     assert.equal(Number(before.rows[0].qty),20);assert.equal(Number(before.rows[0].wac),15);
+    for(const receiptId of [receipt1,receipt2]){const receiptJournal=await pool.query("SELECT round(sum(l.debit-l.credit),4)::text difference FROM journal_entries e JOIN journal_lines l ON l.journal_entry_id=e.id WHERE e.source_type='goods_receipt' AND e.source_id=$1",[receiptId]);assert.equal(Number(receiptJournal.rows[0].difference),0,"goods receipt must accrue balanced inventory and GRNI");}
+
     const checkout=await createSale(pool,{actorId:user,cashSessionId:session,idempotencyKey:"it-sale-"+suffix,lines:[{productId:product,quantity:"2"}],payments:[{method:"cash",amount:"10"},{method:"cbe",amount:"30",providerReference:"IT-CBE-"+suffix}]});
     assert.equal(checkout.status,"awaiting_payment");
     const stillOnHand=await pool.query("SELECT quantity_on_hand::text qty FROM inventory_balances WHERE product_id=$1",[product]);
