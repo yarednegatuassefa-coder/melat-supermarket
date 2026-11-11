@@ -6,7 +6,13 @@ $ErrorActionPreference = "Stop"
 if ($RestoreDatabase -ne "melat_restore_test") { throw "For safety, restore script only targets the isolated database named melat_restore_test." }
 if (-not $env:DATABASE_ADMIN_URL) { throw "Set DATABASE_ADMIN_URL to a PostgreSQL administrator connection." }
 if (-not $env:BACKUP_AGE_IDENTITY_FILE) { throw "Set BACKUP_AGE_IDENTITY_FILE to the private age identity file." }
-if (-not (Get-Command age -ErrorAction SilentlyContinue) -or -not (Get-Command createdb -ErrorAction SilentlyContinue) -or -not (Get-Command pg_restore -ErrorAction SilentlyContinue)) { throw "age, createdb and pg_restore are required." }
+$createdbCommand = Get-Command createdb -ErrorAction SilentlyContinue
+$pgRestoreCommand = Get-Command pg_restore -ErrorAction SilentlyContinue
+$psqlCommand = Get-Command psql -ErrorAction SilentlyContinue
+$createdb = if ($createdbCommand) { $createdbCommand.Source } else { "C:\Program Files\PostgreSQL\18\bin\createdb.exe" }
+$pgRestore = if ($pgRestoreCommand) { $pgRestoreCommand.Source } else { "C:\Program Files\PostgreSQL\18\bin\pg_restore.exe" }
+$psql = if ($psqlCommand) { $psqlCommand.Source } else { "C:\Program Files\PostgreSQL\18\bin\psql.exe" }
+if (-not (Get-Command age -ErrorAction SilentlyContinue) -or -not (Test-Path $createdb) -or -not (Test-Path $pgRestore) -or -not (Test-Path $psql)) { throw "age and PostgreSQL client tools are required." }
 if (-not (Test-Path $EncryptedBackup)) { throw "Backup file not found." }
 $expectedFile = "$EncryptedBackup.sha256"
 if (Test-Path $expectedFile) {
@@ -18,16 +24,16 @@ $plain = Join-Path $env:TEMP ("melat-restore-" + [guid]::NewGuid().ToString("N")
 try {
   age --decrypt --identity $env:BACKUP_AGE_IDENTITY_FILE --output "$plain" "$EncryptedBackup"
   if ($LASTEXITCODE -ne 0) { throw "Backup decryption failed." }
-  $existing = & psql "$env:DATABASE_ADMIN_URL" -tAc "SELECT 1 FROM pg_database WHERE datname='$RestoreDatabase'"
+  $existing = & $psql "$env:DATABASE_ADMIN_URL" -tAc "SELECT 1 FROM pg_database WHERE datname='$RestoreDatabase'"
   if ($existing -eq "1") { throw "melat_restore_test already exists. Inspect it and remove it manually before retrying; this script never drops databases." }
-  createdb --maintenance-db="$env:DATABASE_ADMIN_URL" "$RestoreDatabase"
+  & $createdb --maintenance-db="$env:DATABASE_ADMIN_URL" "$RestoreDatabase"
   if ($LASTEXITCODE -ne 0) { throw "Could not create isolated restore database." }
   $target = [System.Uri]$env:DATABASE_ADMIN_URL
   $builder = [System.UriBuilder]$target
   $builder.Path = "/$RestoreDatabase"
-  pg_restore --exit-on-error --no-owner --no-acl --dbname="$($builder.Uri.AbsoluteUri)" "$plain"
+  & $pgRestore --exit-on-error --no-owner --no-acl --dbname="$($builder.Uri.AbsoluteUri)" "$plain"
   if ($LASTEXITCODE -ne 0) { throw "pg_restore failed. The isolated restore database may be incomplete; inspect it before removing it." }
-  $count = & psql "$($builder.Uri.AbsoluteUri)" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'"
+  $count = & $psql "$($builder.Uri.AbsoluteUri)" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'"
   Write-Output "RESTORE TEST PASSED. Restored public tables: $count"
   Write-Output "Inspect the restored database before using it. No production database was modified."
 } finally {
