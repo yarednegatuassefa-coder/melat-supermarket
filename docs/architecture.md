@@ -38,4 +38,4 @@ Vercel is a static interface preview only. Its API route returns an explicit 503
 - CORS must remain allowlisted; do not use wildcard credentialed CORS.
 - Rate limits on authentication endpoints.
 - Audit records for privileged and financial actions.
-- Secrets only in the root .env file or a managed secret store.
+- Secrets only in the server/.env file or a managed secret store.
