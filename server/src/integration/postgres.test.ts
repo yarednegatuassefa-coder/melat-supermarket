@@ -55,7 +55,7 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
 
     const checkout=await createSale(pool,{actorId:user,cashSessionId:session,idempotencyKey:"it-sale-"+suffix,lines:[{productId:product,quantity:"2"}],payments:[{method:"cash",amount:"10"},{method:"cbe",amount:"15",providerReference:"IT-CBE-"+suffix},{method:"telebirr",amount:"15",providerReference:"IT-TB-"+suffix}]});
     assert.equal(checkout.status,"awaiting_payment");
-    assert.equal(checkout.pendingPaymentIds.length,2,"each electronic tender must remain independently verifiable");
+    assert.equal(checkout.pendingPaymentIds?.length,2,"each electronic tender must remain independently verifiable");
     const stillOnHand=await pool.query("SELECT quantity_on_hand::text qty,reserved_quantity::text reserved FROM inventory_balances WHERE product_id=$1",[product]);
     assert.equal(Number(stillOnHand.rows[0].qty),20,"pending electronic tender must not decrement physical stock");
     assert.equal(Number(stillOnHand.rows[0].reserved),2,"pending checkout must reserve its sellable stock");
