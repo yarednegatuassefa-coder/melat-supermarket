@@ -33,9 +33,9 @@ The API health check must report status=ok, database=connected, and schema=ready
 2. Install the official Caddy Windows binary and make sure caddy.exe is on PATH.
 3. Double-click ENABLE-LAN-MELAT.bat and approve the Windows administrator prompt. The launcher validates Caddy, configures the firewall, enables secure cookies and trusted-proxy handling, and restarts the local API.
 
-4. Configure the store router's local DNS, or each staff device's hosts file, so melat.local resolves to the reserved server IP.
+4. Configure the store router's local DNS, or each staff device's hosts file, so melat.home.arpa resolves to the reserved server IP.
 5. Export the Caddy local root certificate from the server path printed by the script. Transfer it to each trusted cashier device over a controlled channel and install it into that device's Trusted Root Certification Authorities store. Never distribute the CA private key.
-6. Confirm https://melat.local/api/health reports database and schema ready from each cashier terminal.
+6. Confirm https://melat.home.arpa/api/health reports database and schema ready from each cashier terminal.
 
 The firewall script blocks inbound TCP 4000 and 5432 and permits TCP 443 only from the local subnet on Private/Domain profiles. Do not create router port-forwarding rules. The API and PostgreSQL remain loopback-only; Caddy is the only LAN-facing service.
 
