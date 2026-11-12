@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Pool } from "pg";
-import { hashPassword } from "../src/security/passwords.js";
+import { hashPassword } from "../dist/security/passwords.js";
 
 const { DATABASE_URL, OWNER_USERNAME } = process.env;
 const ownerFullName = process.env.OWNER_FULL_NAME_BASE64
@@ -9,9 +9,14 @@ const ownerFullName = process.env.OWNER_FULL_NAME_BASE64
 const ownerPassword = process.env.OWNER_INITIAL_PASSWORD_BASE64
   ? Buffer.from(process.env.OWNER_INITIAL_PASSWORD_BASE64, "base64").toString("utf8")
   : process.env.OWNER_INITIAL_PASSWORD;
+
 if (!DATABASE_URL || !OWNER_USERNAME || !ownerFullName || !ownerPassword) {
   throw new Error("Set DATABASE_URL, OWNER_USERNAME, owner full name and initial password bootstrap values.");
 }
+if (ownerPassword.length < 16) {
+  throw new Error("Initial owner password must contain at least 16 characters.");
+}
+
 const pool = new Pool({ connectionString: DATABASE_URL });
 try {
   const existing = await pool.query("SELECT id FROM app_users WHERE role = 'owner' LIMIT 1");

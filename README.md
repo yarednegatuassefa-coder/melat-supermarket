@@ -4,7 +4,7 @@ A single-store management and point-of-sale system for Melat Supermarket in Addi
 
 ## V1.0 scope
 
-- One store; ETB currency; English and Amharic interface.
+- One store; ETB currency; English interface with Amharic product-name fields. Full Amharic UI localization remains outstanding.
 - Roles: owner, manager, cashier, inventory clerk.
 - Point of sale with immediate payment, split tenders and printable receipts.
 - Payment methods: cash, CBE, Telebirr and card.

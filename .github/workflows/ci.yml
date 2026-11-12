@@ -33,3 +33,20 @@ jobs:
         run: npm test
       - name: Build API and client
         run: npm run build
+
+      - name: Keep only runtime dependencies
+        run: npm prune --omit=dev
+      - name: Assemble prebuilt Windows installation bundle
+        run: |
+          mkdir -p release/Melat
+          cp package.json README.md release/Melat/
+          cp -R client server database scripts docs node_modules release/Melat/
+          cd release
+          zip -qr ../melat-v1.0-windows-bundle.zip Melat
+      - name: Upload Windows installation bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: melat-v1.0-windows-bundle
+          path: melat-v1.0-windows-bundle.zip
+          if-no-files-found: error
+          retention-days: 30

@@ -54,10 +54,15 @@ try {
 }
 Push-Location $repoRoot
 try {
-  npm install
-  if ($LASTEXITCODE -ne 0) { throw "npm install failed. No database migrations were run." }
-  npm run build
-  if ($LASTEXITCODE -ne 0) { throw "Build failed. No database migrations were run." }
+  $prebuilt = (Test-Path (Join-Path $repoRoot "node_modules\\pg\\package.json")) -and (Test-Path (Join-Path $repoRoot "client\\dist\\index.html")) -and (Test-Path (Join-Path $repoRoot "server\\dist\\index.js"))
+  if (-not $prebuilt) {
+    npm install
+    if ($LASTEXITCODE -ne 0) { throw "npm install failed. No database migrations were run." }
+    npm run build
+    if ($LASTEXITCODE -ne 0) { throw "Build failed. No database migrations were run." }
+  } else {
+    Write-Output "Using the prebuilt Melat release bundle; no npm registry download is required."
+  }
   npm run db:migrate --workspace server
   if ($LASTEXITCODE -ne 0) { throw "Database migration failed. Review PostgreSQL errors before retrying." }
   npm run db:bootstrap --workspace server

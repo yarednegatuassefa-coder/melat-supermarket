@@ -27,7 +27,7 @@ The repository includes a guided setup script. From the repository root, run:
 powershell -ExecutionPolicy Bypass -File .\scripts\setup-local-melat.ps1
 ```
 
-It checks the PostgreSQL 18 service, prompts for the existing `melat_app` database password and a new 16+ character owner password, installs dependencies, builds the application, applies migrations, creates the first owner and starts the local application. It writes `server/.env` because workspace scripts load dotenv from the server workspace. It refuses to overwrite an existing `server/.env`.
+It checks the PostgreSQL 18 service, prompts for the existing `melat_app` database password and a new 16+ character owner password, uses the included prebuilt application when present (so no npm registry download is needed), otherwise installs dependencies and builds from source, then applies migrations, creates the first owner and starts the local application. It writes `server/.env` because workspace scripts load dotenv from the server workspace. It refuses to overwrite an existing `server/.env`.
 
 Before running it:
 1. Create a dedicated empty PostgreSQL database named `melat` and the least-privilege role `melat_app`. The script does not create or modify database roles and never targets the unrelated `command` database.
@@ -75,6 +75,6 @@ A restore is not considered tested until a real encrypted backup has been restor
 
 The repository contains API and UI foundations for authentication, products, inventory receipts, POS checkout, split tender, payment verification, receipt HTML/printing, purchasing, supplier invoices/payments/returns, cash drawers, refunds, adjustments, accounting journals, tax configuration, financial reports and bank reconciliation.
 
-The PostgreSQL integration test covers migration installation, WAC receipt valuation, pending electronic tender, FEFO allocation, stock decrement, balanced sale journals and a refund/reversal exercise. It still must run successfully in CI. More acceptance tests and store-side restore/operational drills remain outstanding.
+The PostgreSQL integration test covers migration installation, WAC receipt valuation, pending electronic tender, FEFO allocation, stock decrement, balanced sale journals and a refund/reversal exercise. The 14-test PostgreSQL/domain suite and API/client TypeScript build passed in GitHub Actions on commit `6e65a99444e1b45499c542af9ecd751350e15152`; the Windows installation bundle is generated from a successful CI run. More acceptance tests and store-side restore/operational drills remain outstanding.
 
 The Vercel preview does not host this Node API or a production database. Login on the Vercel preview is therefore not expected to work. Use the local server only after the guided setup and health check succeed; do not use the preview for real transactions.
