@@ -6,9 +6,9 @@ if (-not $nodeCommand -or -not $npmCommand) { throw "Node.js 22+ and npm are req
 $nodeVersion = (node --version).Trim().TrimStart("v")
 $nodeMajor = [int]$nodeVersion.Split(".")[0]
 if ($nodeMajor -lt 22) { throw "Node.js 22 or newer is required; detected $nodeVersion." }
-# dotenv/config loads from the process working directory (the repository root), not server/.
-$envFile = Join-Path $repoRoot ".env"
-if (Test-Path $envFile) { throw ".env already exists. Refusing to overwrite credentials." }
+# npm --workspace server runs scripts with server/ as the working directory; dotenv loads server/.env.
+$envFile = Join-Path $repoRoot "server\.env"
+if (Test-Path $envFile) { throw "server/.env already exists. Refusing to overwrite credentials." }
 $service = Get-Service -Name "postgresql-x64-18" -ErrorAction SilentlyContinue
 if (-not $service) { throw "PostgreSQL 18 Windows service was not found." }
 if ($service.Status -ne "Running") { Start-Service -Name "postgresql-x64-18" }
