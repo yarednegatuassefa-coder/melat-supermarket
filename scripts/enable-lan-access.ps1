@@ -23,6 +23,11 @@ $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" 
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 0) -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description "Local HTTPS reverse proxy for Melat POS; no public listener." -Force | Out-Null
 Start-ScheduledTask -TaskName $taskName
-Write-Output "LAN HTTPS proxy configured. Restart the Melat Local API scheduled task so secure cookies and proxy trust take effect."
+$apiTask = Get-ScheduledTask -TaskName "Melat Local API" -ErrorAction SilentlyContinue
+if (-not $apiTask) { throw "Melat Local API scheduled task was not found. Run the installer again before enabling LAN access." }
+$listener = Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($listener) { Stop-Process -Id $listener.OwningProcess -Force }
+Start-ScheduledTask -TaskName "Melat Local API"
+Write-Output "LAN HTTPS proxy and API restart requested. Verify the HTTPS health endpoint from a cashier terminal."
 Write-Output "Staff devices must resolve melat.local to the store server's reserved LAN IP and trust Caddy's root certificate."
 Write-Output "Caddy root certificate: $env:APPDATA\Caddy\pki\authorities\local\root.crt"
