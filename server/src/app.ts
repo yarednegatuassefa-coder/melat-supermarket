@@ -37,12 +37,18 @@ app.get("/api/health", async (_req, res) => {
   if (!pool) return res.status(503).json({ service: "melat-api", status: "degraded", database: "not-configured", schema: "unknown" });
   try {
     await pool.query("SELECT 1");
-    const requiredSchemaVersion = "023";
-    const migration = await pool.query("SELECT version FROM schema_migrations WHERE version = $1", [requiredSchemaVersion]);
-    if (!migration.rowCount) {
-      return res.status(503).json({ service: "melat-api", status: "degraded", database: "connected", schema: "outdated", requiredSchemaVersion });
+    const requiredSchemaVersions = [
+      "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013",
+      "015", "016", "017", "018", "019", "020", "021", "022", "023"
+    ];
+    const migration = await pool.query("SELECT version FROM schema_migrations WHERE version = ANY($1::text[])", [requiredSchemaVersions]);
+    if (migration.rowCount !== requiredSchemaVersions.length) {
+      return res.status(503).json({
+        service: "melat-api", status: "degraded", database: "connected", schema: "outdated",
+        appliedMigrationCount: migration.rowCount, requiredMigrationCount: requiredSchemaVersions.length
+      });
     }
-    return res.json({ service: "melat-api", status: "ok", database: "connected", schema: "ready", schemaVersion: migration.rows[0].version });
+    return res.json({ service: "melat-api", status: "ok", database: "connected", schema: "ready", schemaVersion: "023" });
   } catch {
     return res.status(503).json({ service: "melat-api", status: "degraded", database: "unavailable", schema: "unverified" });
   }
