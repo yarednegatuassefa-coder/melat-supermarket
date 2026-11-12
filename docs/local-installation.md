@@ -21,18 +21,19 @@ The POS can tolerate an external internet outage only while the local server, LA
 
 ## First-time Windows setup
 
-The repository includes a guided setup script. From the repository root, run:
+The CI workflow produces a prebuilt Windows installation ZIP named `melat-v1.0-windows-bundle`. Download and extract that ZIP, then double-click `INSTALL-MELAT.bat`. The installer prompts for the existing `melat_app` database password and a new 16+ character owner password. It uses the included compiled application and production dependencies, so it does not need to download npm packages.
+
+For a source checkout instead, run this from the repository root:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\setup-local-melat.ps1
 ```
 
-It checks the PostgreSQL 18 service, prompts for the existing `melat_app` database password and a new 16+ character owner password, uses the included prebuilt application when present (so no npm registry download is needed), otherwise installs dependencies and builds from source, then applies migrations, creates the first owner and starts the local application. It writes `server/.env` because workspace scripts load dotenv from the server workspace. It refuses to overwrite an existing `server/.env`.
-
+The guided script checks the PostgreSQL 18 service, writes `server/.env`, applies migrations, creates the first owner and starts the local application. It refuses to overwrite an existing `server/.env`.
 Before running it:
 1. Create a dedicated empty PostgreSQL database named `melat` and the least-privilege role `melat_app`. The script does not create or modify database roles and never targets the unrelated `command` database.
 2. Confirm PostgreSQL is accepting connections on localhost:5432.
-3. Ensure npm can reach the package registry. If the network blocks npm, setup stops before database migrations.
+3. For a source checkout only, ensure npm can reach the package registry. The prebuilt ZIP does not need npm registry access.
 
 For manual setup, copy `server/.env.example` to `server/.env`, replace the database password and owner bootstrap values, then run `npm install`, `npm run build`, `npm run db:migrate --workspace server`, and `npm run db:bootstrap --workspace server` from the repository root. Remove `OWNER_INITIAL_PASSWORD` from the environment immediately after bootstrap.
 
