@@ -25,6 +25,7 @@ Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Pr
 Start-ScheduledTask -TaskName $taskName
 $apiTask = Get-ScheduledTask -TaskName "Melat Local API" -ErrorAction SilentlyContinue
 if (-not $apiTask) { throw "Melat Local API scheduled task was not found. Run the installer again before enabling LAN access." }
+Stop-ScheduledTask -TaskName "Melat Local API" -ErrorAction SilentlyContinue
 $listener = Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($listener) { Stop-Process -Id $listener.OwningProcess -Force }
 Start-ScheduledTask -TaskName "Melat Local API"
