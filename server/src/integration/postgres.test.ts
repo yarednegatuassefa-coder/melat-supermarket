@@ -72,7 +72,7 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     const saleLines=await pool.query("SELECT unit_wac_snapshot::text wac FROM sale_lines WHERE sale_id=$1",[checkout.saleId]);
     assert.equal(Number(saleLines.rows[0].wac),15);
     const allocation=await pool.query("SELECT b.id batch_id,b.expiry_date,a.quantity::text qty FROM sale_line_batch_allocations a JOIN inventory_batches b ON b.id=a.batch_id JOIN sale_lines l ON l.id=a.sale_line_id WHERE l.sale_id=$1",[checkout.saleId]);
-    assert.equal(allocation.rows.length,1);assert.equal(String(allocation.rows[0].expiry_date).slice(0,10),"2026-12-01");
+    assert.equal(allocation.rows.length,1);assert.equal(new Date(allocation.rows[0].expiry_date).toISOString().slice(0,10),"2026-12-01");
     const balanced=await pool.query("SELECT round(sum(l.debit-l.credit),4)::text difference FROM journal_lines l JOIN journal_entries e ON e.id=l.journal_entry_id WHERE e.source_type='sale' AND e.source_id=$1",[checkout.saleId]);
     assert.equal(Number(balanced.rows[0].difference),0,"posted sale journal must balance");
     const abandoned=await createSale(pool,{actorId:user,cashSessionId:session,idempotencyKey:"it-abandon-"+suffix,lines:[{productId:product,quantity:"1"}],payments:[{method:"cbe",amount:"20",providerReference:"IT-ABANDON-"+suffix}]});
