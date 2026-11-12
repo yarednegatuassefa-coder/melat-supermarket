@@ -11,7 +11,7 @@ if ($LASTEXITCODE -ne 0) { throw "Caddyfile validation failed." }
 & $caddy.Source trust
 if ($LASTEXITCODE -ne 0) { throw "Could not install Caddy's local root certificate. Run this script elevated." }
 $lines = Get-Content $envFile
-$lines = $lines -replace '^APP_BASE_URL=.*$', 'APP_BASE_URL=https://melat.local'
+$lines = $lines -replace '^APP_BASE_URL=.*$', 'APP_BASE_URL=https://melat.home.arpa'
 $lines = $lines -replace '^COOKIE_SECURE=.*$', 'COOKIE_SECURE=true'
 $lines = $lines -replace '^TRUST_PROXY=.*$', 'TRUST_PROXY=1'
 $lines | Set-Content -Path $envFile -Encoding UTF8
