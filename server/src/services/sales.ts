@@ -127,6 +127,8 @@ export async function createSale(pool:Pool, input:{actorId:string;cashSessionId:
     for(const item of [...input.lines].sort((a,b)=>a.productId.localeCompare(b.productId))){
       const p=await client.query(
         `SELECT p.id,pp.selling_price::text,b.weighted_average_cost::text,b.reserved_quantity::text
+           FROM products p
+           JOIN inventory_balances b ON b.product_id=p.id
            JOIN LATERAL(SELECT selling_price FROM product_prices WHERE product_id=p.id AND effective_from<=now() AND (effective_to IS NULL OR effective_to>now()) ORDER BY effective_from DESC LIMIT 1) pp ON true
           WHERE p.id=$1 AND p.is_active=true FOR UPDATE OF p,b`,[item.productId]);
       if(!p.rowCount) throw new Error("Product unavailable or has no active selling price.");
