@@ -22,7 +22,7 @@ From the repository root, run PowerShell as the store administrator:
     Set-ExecutionPolicy -Scope Process Bypass
     .\scripts\setup-local-melat.ps1
 
-The setup script writes the root .env file. This is deliberate: the API, migration runner and owner bootstrap load dotenv from the repository working directory. It prompts for the existing melat_app password and a unique 16+ character owner password, applies migrations, creates the initial owner only if one does not already exist, clears the temporary bootstrap values, starts the API and checks both PostgreSQL and schema readiness.
+The setup script writes server/.env. This is deliberate: npm runs workspace scripts with server/ as the working directory, so the API, migration runner and owner bootstrap load dotenv from that directory. It prompts for the existing melat_app password and a unique 16+ character owner password, applies migrations, creates the initial owner only if one does not already exist, clears the temporary bootstrap values, starts the API and checks both PostgreSQL and schema readiness.
 
 The API listens on 127.0.0.1:4000 only. The first local verification address is:
 
