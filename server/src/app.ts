@@ -37,9 +37,10 @@ app.get("/api/health", async (_req, res) => {
   if (!pool) return res.status(503).json({ service: "melat-api", status: "degraded", database: "not-configured", schema: "unknown" });
   try {
     await pool.query("SELECT 1");
-    const migration = await pool.query("SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1");
+    const requiredSchemaVersion = "023";
+    const migration = await pool.query("SELECT version FROM schema_migrations WHERE version = $1", [requiredSchemaVersion]);
     if (!migration.rowCount) {
-      return res.status(503).json({ service: "melat-api", status: "degraded", database: "connected", schema: "not-migrated" });
+      return res.status(503).json({ service: "melat-api", status: "degraded", database: "connected", schema: "outdated", requiredSchemaVersion });
     }
     return res.json({ service: "melat-api", status: "ok", database: "connected", schema: "ready", schemaVersion: migration.rows[0].version });
   } catch {
