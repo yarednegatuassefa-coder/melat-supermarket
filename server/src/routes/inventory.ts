@@ -53,7 +53,7 @@ export function inventoryRoutes(pool: Pool) {
       nameAm: z.string().trim().max(180).optional().nullable(),
       baseUnit: z.string().trim().min(1).max(24).default("each"),
       tracksExpiry: z.boolean().default(false),
-      sellingPrice: z.string().regex(/^\\d+(?:\\.\\d{1,4})?$/)
+      sellingPrice: z.string().regex(/^\d+(?:\.\d{1,4})?$/)
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "Enter a valid SKU, product name and non-negative selling price." });
