@@ -60,6 +60,9 @@ export function requireAuth(pool: Pool) {
       const row = result.rows[0];
       req.user = { id: row.id, username: row.username, fullName: row.full_name, role: row.role, mustChangePassword: row.must_change_password };
       req.sessionId = row.session_id;
+      if (row.must_change_password && !["/change-password", "/logout", "/me"].includes(req.path)) {
+        return res.status(403).json({ error: "Change your temporary password before using Melat." });
+      }
       void pool.query("UPDATE app_sessions SET last_seen_at = now() WHERE id = $1", [row.session_id]);
       return next();
     } catch (error) { return next(error); }
