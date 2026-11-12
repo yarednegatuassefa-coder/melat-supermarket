@@ -16,28 +16,25 @@ A single-store management and point-of-sale system for Melat Supermarket in Addi
 
 ## Explicit exclusions
 
-Customer credit and receivables, multi-branch support, customer loyalty, native mobile apps, AI financial decisions and advanced forecasting are not part of V1.0.
+Customer credit and receivables, multi-branch support, customer loyalty, native mobile apps, AI financial decisions and unapproved enterprise scope are not part of V1.0.
 
-## Architecture
+## Architecture and deployment
 
-- `client/`: React + TypeScript browser application.
-- `server/`: Node.js + TypeScript API (modular monolith).
-- `database/`: PostgreSQL schema and versioned migrations.
-- `docs/`: architecture, business rules, operations and acceptance tests.
+The authoritative production system is **local-first**: PostgreSQL and the API run on a dedicated store PC, and cashier devices connect over the store LAN through HTTPS. In-store transactions do not depend on Vercel, Neon or public internet connectivity.
 
-The initial deployment target is a local-network application. Vercel may be used for preview builds or selected web components, but it is not the production POS server or authoritative database. POS operation must not depend on external internet when the local server and LAN are available.
+Vercel hosts a static interface preview only. Its API route deliberately returns HTTP 503 and never connects to the store database. Do not configure a cloud database as a second writable ledger.
+
+- client/: React + TypeScript + Vite browser application.
+- server/: Node.js + TypeScript API (modular monolith).
+- database/: PostgreSQL schema and versioned migrations.
+- docs/: architecture, business rules, operations and acceptance tests.
+
+See docs/local-deployment.md before installing the system.
 
 ## Development status
 
-This repository contains the approved project baseline and architecture. Features are not considered implemented until code, automated tests and acceptance evidence exist.
+Features are not considered production-ready until code, automated tests and store acceptance evidence exist. A successful Vercel build is not proof that the store POS is operational.
 
 ## Security
 
-Do not commit passwords, API keys, database dumps, customer data, production credentials or real payment credentials. Use `.env.example` as a template and keep actual `.env` files untracked.
-
-## Project decisions
-
-- [V1 requirements](docs/v1-requirements.md)
-- [Architecture](docs/architecture.md)
-- [Business rules](docs/business-rules.md)
-- [Acceptance plan](docs/acceptance-plan.md)
+Do not commit passwords, API keys, database dumps, customer data, production credentials or real payment credentials. Use .env.example as a template and keep actual .env files untracked.
