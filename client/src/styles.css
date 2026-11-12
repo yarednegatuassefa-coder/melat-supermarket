@@ -70,7 +70,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .user-mini small{font-size:10px;color:#a9c3b5}
 .logout-button{width:100%;margin-top:15px;padding:10px 12px;border:1px solid rgba(208,230,215,.2);border-radius:8px;color:#d8e8dd;font-size:11px}
 .logout-button:hover{background:rgba(255,255,255,.08);border-color:rgba(208,230,215,.38)}
-.main{max-width:1660px;padding:34px clamp(24px,4vw,66px) 30px}
+.main{margin-left:258px;max-width:1660px;padding:34px clamp(24px,4vw,66px) 30px}
 .topbar{margin-bottom:27px;min-height:56px}
 .topbar .eyebrow{font-size:9px;color:#829289;letter-spacing:1.65px}
 .topbar h1{margin:5px 0 0;font-family:Inter,"Segoe UI",sans-serif;font-size:27px;font-weight:720;letter-spacing:-.8px;color:#1a2c24}
