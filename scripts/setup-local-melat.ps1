@@ -54,7 +54,7 @@ try {
 }
 Push-Location $repoRoot
 try {
-  $prebuilt = (Test-Path (Join-Path $repoRoot "node_modules\\pg\\package.json")) -and (Test-Path (Join-Path $repoRoot "client\\dist\\index.html")) -and (Test-Path (Join-Path $repoRoot "server\\dist\\index.js"))
+  $prebuilt = (Test-Path (Join-Path $repoRoot "node_modules\pg\package.json")) -and (Test-Path (Join-Path $repoRoot "client\dist\index.html")) -and (Test-Path (Join-Path $repoRoot "server\dist\index.js"))
   if (-not $prebuilt) {
     npm install
     if ($LASTEXITCODE -ne 0) { throw "npm install failed. No database migrations were run." }
