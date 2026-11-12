@@ -24,7 +24,7 @@ const pool = process.env.DATABASE_URL ? new Pool({
 }) : null;
 
 app.disable("x-powered-by");
-app.set("trust proxy", 1);
+app.set("trust proxy", process.env.TRUST_PROXY === "1" ? 1 : false);
 app.use(helmet());
 app.use(cors({
   origin: process.env.APP_BASE_URL ? process.env.APP_BASE_URL.split(",").map((value) => value.trim()) : ["http://localhost:5173"],
@@ -34,12 +34,23 @@ app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
 app.get("/api/health", async (_req, res) => {
-  if (!pool) return res.status(503).json({ service: "melat-api", status: "degraded", database: "not-configured" });
+  if (!pool) return res.status(503).json({ service: "melat-api", status: "degraded", database: "not-configured", schema: "unknown" });
   try {
     await pool.query("SELECT 1");
-    return res.json({ service: "melat-api", status: "ok", database: "connected" });
+    const requiredSchemaVersions = [
+      "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013",
+      "015", "016", "017", "018", "019", "020", "021", "022", "023"
+    ];
+    const migration = await pool.query("SELECT version FROM schema_migrations WHERE version = ANY($1::text[])", [requiredSchemaVersions]);
+    if (migration.rowCount !== requiredSchemaVersions.length) {
+      return res.status(503).json({
+        service: "melat-api", status: "degraded", database: "connected", schema: "outdated",
+        appliedMigrationCount: migration.rowCount, requiredMigrationCount: requiredSchemaVersions.length
+      });
+    }
+    return res.json({ service: "melat-api", status: "ok", database: "connected", schema: "ready", schemaVersion: "023" });
   } catch {
-    return res.status(503).json({ service: "melat-api", status: "degraded", database: "unavailable" });
+    return res.status(503).json({ service: "melat-api", status: "degraded", database: "unavailable", schema: "unverified" });
   }
 });
 
