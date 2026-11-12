@@ -6,8 +6,9 @@ if (-not $nodeCommand -or -not $npmCommand) { throw "Node.js 22+ and npm are req
 $nodeVersion = (node --version).Trim().TrimStart("v")
 $nodeMajor = [int]$nodeVersion.Split(".")[0]
 if ($nodeMajor -lt 22) { throw "Node.js 22 or newer is required; detected $nodeVersion." }
-$envFile = Join-Path $repoRoot "server\.env"
-if (Test-Path $envFile) { throw "server/.env already exists. Refusing to overwrite credentials." }
+# dotenv/config loads from the process working directory (the repository root), not server/.
+$envFile = Join-Path $repoRoot ".env"
+if (Test-Path $envFile) { throw ".env already exists. Refusing to overwrite credentials." }
 $service = Get-Service -Name "postgresql-x64-18" -ErrorAction SilentlyContinue
 if (-not $service) { throw "PostgreSQL 18 Windows service was not found." }
 if ($service.Status -ne "Running") { Start-Service -Name "postgresql-x64-18" }
@@ -34,6 +35,7 @@ try {
     "NODE_ENV=production",
     "PORT=4000",
     "BIND_HOST=127.0.0.1",
+    "TRUST_PROXY=0",
     "APP_BASE_URL=http://localhost:4000",
     "COOKIE_SECURE=false",
     "DATABASE_URL=postgresql://melat_app:$encodedDbPassword@localhost:5432/melat",
@@ -76,13 +78,14 @@ try {
   Start-Sleep -Seconds 3
   try {
     $health = Invoke-RestMethod -Uri "http://localhost:4000/api/health" -TimeoutSec 8
-    if ($health.status -ne "ok") { throw "API health check did not report ok." }
+    if ($health.status -ne "ok" -or $health.database -ne "connected" -or $health.schema -ne "ready") { throw "API health check did not confirm database and migrations." }
   } catch {
     Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue
-    throw "API did not pass its health check. Inspect the server process before retrying."
+    throw "API did not pass its database/schema health check. Inspect the server process before retrying."
   }
+  & (Join-Path $PSScriptRoot "register-local-api-task.ps1")
   Start-Process "http://localhost:4000"
   Write-Output "Melat local API and UI are running at http://localhost:4000"
-  Write-Output "Sign in using the owner credentials you just created."
-  Write-Output "This is local-machine verification only. Do not expose it to the LAN; configure Caddy HTTPS before staff devices connect."
+  Write-Output "The API is bound to loopback only. Do not expose port 4000 or PostgreSQL to the LAN or internet."
+  Write-Output "Configure the documented Caddy HTTPS reverse proxy before staff devices connect."
 } finally { Pop-Location }
