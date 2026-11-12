@@ -43,6 +43,10 @@ export default function App() {
         const result = await api<{ products: Product[] }>("/api/inventory/products");
         setProducts(result.products);
       }
+      if (tab === "overview") {
+        const result = await api<{ movements: Movement[] }>("/api/inventory/movements");
+        setMovements(result.movements);
+      }
       if (tab === "movements") {
         const result = await api<{ movements: Movement[] }>("/api/inventory/movements");
         setMovements(result.movements);
@@ -143,11 +147,62 @@ export default function App() {
         <header className="topbar"><div><span className="eyebrow">STORE MANAGEMENT SYSTEM</span><h1>{nav.find((item) => item.id === tab)?.label ?? "Overview"}</h1></div><div className="top-user"><span className="online-dot" /> SECURE SESSION <b>{user.username}</b></div></header>
         {error && <div className={`notice ${error.includes("created") ? "success" : ""}`}>{error}<button onClick={() => setError("")}>×</button></div>}
         {tab === "overview" && <>
-          <section className="welcome"><div><span className="eyebrow light">MELAT · STORE OPERATIONS</span><h2>Clarity in every<br />transaction.</h2><p>Operational visibility for stock, purchasing and financial discipline.</p></div><div className="welcome-seal">M</div></section>
-          <div className="section-heading"><div><span className="eyebrow">LIVE STORE DATA</span><h2>Inventory position</h2></div><button className="quiet-button" onClick={() => void loadData()}>Refresh data ↻</button></div>
-          <section className="stat-grid"><article className="stat-card"><span>ACTIVE PRODUCTS</span><strong>{products.length}</strong><small>Catalog records</small></article><article className="stat-card"><span>UNITS ON HAND</span><strong>{products.reduce((sum,p) => sum + Number(p.quantity_on_hand),0).toLocaleString()}</strong><small>Current stock projection</small></article><article className="stat-card"><span>INVENTORY AT WAC</span><strong>{money(stockValue.toFixed(2))}</strong><small>Estimated carrying value</small></article></section>
+          <section className="welcome">
+            <div className="welcome-copy">
+              <span className="eyebrow light">MELAT · STORE OPERATIONS</span>
+              <h2>Run the store.<br />Know the numbers.</h2>
+              <p>Your operational control centre for inventory, checkout, purchasing and financial oversight.</p>
+              <div className="welcome-actions">
+                {user.role !== "inventory_clerk" && <button className="primary-action" onClick={() => setTab("pos")}>Open point of sale <span aria-hidden="true">↗</span></button>}
+                <button className="secondary-action" onClick={() => setTab("inventory")}>Manage inventory <span aria-hidden="true">→</span></button>
+              </div>
+            </div>
+            <div className="welcome-seal" aria-hidden="true">M</div>
+          </section>
+          <div className="section-heading">
+            <div><span className="eyebrow">LIVE STORE DATA</span><h2>Inventory position</h2></div>
+            <button className="quiet-button" onClick={() => void loadData()}>Refresh data ↻</button>
+          </div>
+          <section className="stat-grid">
+            <article className="stat-card"><span>PRODUCT CATALOG</span><strong>{products.length.toLocaleString()}</strong><small>Recorded products</small></article>
+            <article className="stat-card"><span>UNITS ON HAND</span><strong>{products.reduce((sum,p) => sum + Number(p.quantity_on_hand),0).toLocaleString()}</strong><small>Recorded stock quantity</small></article>
+            <article className="stat-card"><span>INVENTORY AT WAC</span><strong>{money(stockValue.toFixed(2))}</strong><small>Estimated carrying value</small></article>
+            <article className="stat-card"><span>OUT OF STOCK</span><strong>{products.filter(p => Number(p.quantity_on_hand) <= 0).length}</strong><small>Products with zero balance</small></article>
+            <article className="stat-card"><span>EXPIRY TRACKED</span><strong>{products.filter(p => p.tracks_expiry).length}</strong><small>Products requiring date control</small></article>
+          </section>
           <div className="section-heading"><div><span className="eyebrow">CONTROL CENTRE</span><h2>Operational modules</h2></div></div>
-          <section className="module-grid">{[{id:"inventory",code:"INV",name:"Inventory",detail:"Products, stock balances and WAC"},{id:"movements",code:"LEDGER",name:"Stock movements",detail:"Traceable inventory ledger"},{id:"staff",code:"ACCESS",name:"Staff access",detail:"Role-controlled accounts"}].filter((m) => m.id !== "staff" || user.role === "owner").map((m) => <button className="module-card" key={m.id} onClick={() => setTab(m.id)}><span className="module-code">{m.code}</span><h3>{m.name}</h3><p>{m.detail}</p><span className="module-state">OPEN MODULE →</span></button>)}</section>
+          <section className="module-grid">
+            {[
+              {id:"pos",code:"01 · SALES",name:"Point of sale",detail:"Checkout, split tender and pending payments"},
+              {id:"inventory",code:"02 · STOCK",name:"Inventory",detail:"Catalog, balances and weighted average cost"},
+              {id:"purchasing",code:"03 · SUPPLY",name:"Purchasing",detail:"Suppliers, receiving and supplier invoices"},
+              {id:"movements",code:"04 · AUDIT",name:"Stock movements",detail:"Traceable inventory movement ledger"},
+              {id:"cash",code:"05 · CASH",name:"Cash drawer",detail:"Sessions, deposits and cash reconciliation"},
+              {id:"finance",code:"06 · FINANCE",name:"Finance & reports",detail:"Statements, tax, refunds and bank controls"},
+              {id:"staff",code:"07 · ACCESS",name:"Staff access",detail:"Role-controlled staff accounts"}
+            ].filter((m) => nav.some(n => n.id === m.id)).map((m) => <button className="module-card" key={m.id} onClick={() => setTab(m.id)}><span className="module-code">{m.code}</span><h3>{m.name}</h3><p>{m.detail}</p><span className="module-state">OPEN MODULE →</span></button>)}
+          </section>
+          <section className="dashboard-lower">
+            <div className="content-card">
+              <div className="card-heading"><div><span className="eyebrow">AUDIT TRAIL</span><h2>Recent stock activity</h2></div><button className="quiet-button" onClick={() => setTab("movements")}>View ledger →</button></div>
+              <div className="activity-list">
+                {movements.slice(0, 5).map((m) => <div className="activity-row" key={m.id}>
+                  <div className="activity-main"><span className="activity-dot" /><div><b>{m.name_en}</b><small>{m.movement_type.replaceAll("_", " ")} · {dateTime(m.occurred_at)} · {m.username}</small></div></div>
+                  <span className="activity-amount">{Number(m.quantity_delta) > 0 ? "+" : ""}{m.quantity_delta}</span>
+                </div>)}
+                {movements.length === 0 && <div className="empty-state">No stock movements have been recorded yet. They will appear here as inventory is received, sold or adjusted.</div>}
+              </div>
+            </div>
+            <div className="content-card">
+              <div className="card-heading"><div><span className="eyebrow">STOCK CONTROL</span><h2>Zero-balance products</h2></div><span className="stock-count">{products.filter(p => Number(p.quantity_on_hand) <= 0).length} items</span></div>
+              <div className="stock-watch-list">
+                {products.filter(p => Number(p.quantity_on_hand) <= 0).slice(0, 5).map((p) => <div className="stock-watch-row" key={p.id}>
+                  <div className="stock-main"><div><b>{p.name_en}</b><small>{p.sku}</small></div></div><span className="stock-count">0 {p.base_unit}</span>
+                </div>)}
+                {products.every(p => Number(p.quantity_on_hand) > 0) && <div className="empty-state">No products currently have a zero recorded stock balance.</div>}
+              </div>
+            </div>
+          </section>
         </>}
         {tab === "pos" && <PosScreen />}{tab === "purchasing" && <PurchasingScreen />}{tab === "cash" && <CashScreen />}{tab === "finance" && <FinanceScreen />}{tab === "inventory" && <><div className="section-heading"><div><span className="eyebrow">INVENTORY CONTROL</span><h2>Product balances</h2></div><button className="quiet-button" onClick={() => void loadData()}>Refresh ↻</button></div><ProductCreateForm onCreated={loadData} onError={setError} /><div className="table-wrap"><table><thead><tr><th>PRODUCT</th><th>SKU / BARCODE</th><th>ON HAND</th><th>WAC / UNIT</th><th>SELLING PRICE</th><th>EXPIRY</th></tr></thead><tbody>{products.map((p) => <tr key={p.id}><td><b>{p.name_en}</b><small>{p.name_am ?? ""}</small></td><td>{p.sku}<small>{p.barcode ?? "No barcode"}</small></td><td className="numeric">{Number(p.quantity_on_hand).toLocaleString()} {p.base_unit}</td><td className="numeric">{money(p.weighted_average_cost)}</td><td className="numeric">{money(p.selling_price)}</td><td>{p.tracks_expiry ? "Tracked" : "—"}</td></tr>)}{products.length === 0 && <tr><td colSpan={6} className="empty-cell">No products have been entered yet.</td></tr>}</tbody></table></div></>}
         {tab === "movements" && <><div className="section-heading"><div><span className="eyebrow">AUDITABLE STOCK LEDGER</span><h2>Recent movements</h2></div><button className="quiet-button" onClick={() => void loadData()}>Refresh ↻</button></div><div className="table-wrap"><table><thead><tr><th>DATE</th><th>PRODUCT</th><th>TYPE</th><th>QUANTITY</th><th>UNIT COST</th><th>RECORDED BY</th></tr></thead><tbody>{movements.map((m) => <tr key={m.id}><td>{dateTime(m.occurred_at)}</td><td><b>{m.name_en}</b><small>{m.sku}</small></td><td>{m.movement_type.replaceAll("_"," ")}</td><td className="numeric">{m.quantity_delta}</td><td className="numeric">{money(m.unit_cost)}</td><td>{m.username}</td></tr>)}{movements.length === 0 && <tr><td colSpan={6} className="empty-cell">No inventory movements recorded.</td></tr>}</tbody></table></div></>}
