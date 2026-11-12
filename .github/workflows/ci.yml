@@ -39,7 +39,7 @@ jobs:
       - name: Assemble prebuilt Windows installation bundle
         run: |
           mkdir -p release/Melat
-          cp package.json README.md release/Melat/
+          cp package.json README.md INSTALL-MELAT.bat release/Melat/
           cp -R client server database scripts docs node_modules release/Melat/
           cd release
           zip -qr ../melat-v1.0-windows-bundle.zip Melat
