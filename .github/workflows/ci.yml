@@ -40,7 +40,7 @@ jobs:
         run: |
           mkdir -p release/Melat
           cp package.json README.md INSTALL-MELAT.bat release/Melat/
-          cp -R client server database scripts docs node_modules release/Melat/
+          cp -R client server database scripts docs deploy node_modules release/Melat/
           cd release
           zip -qr ../melat-v1.0-windows-bundle.zip Melat
       - name: Upload Windows installation bundle
@@ -70,6 +70,8 @@ jobs:
           $required = @(
             "INSTALL-MELAT.bat",
             "scripts/setup-local-melat.ps1",
+            "scripts/enable-lan-access.ps1",
+            "deploy/Caddyfile",
             "client/dist/index.html",
             "server/dist/index.js",
             "server/dist/security/passwords.js",
@@ -82,6 +84,7 @@ jobs:
             if (-not (Test-Path -LiteralPath $path)) { throw "Release is missing required file: $relative" }
           }
           [void][scriptblock]::Create((Get-Content (Join-Path $root "scripts/setup-local-melat.ps1") -Raw))
+          [void][scriptblock]::Create((Get-Content (Join-Path $root "scripts/enable-lan-access.ps1") -Raw))
           node --check (Join-Path $root "server/dist/index.js")
           if ($LASTEXITCODE -ne 0) { throw "Compiled API entry point failed Node syntax validation." }
           node --check (Join-Path $root "server/scripts/bootstrap-owner.mjs")
