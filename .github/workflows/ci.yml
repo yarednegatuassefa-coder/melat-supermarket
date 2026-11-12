@@ -50,3 +50,40 @@ jobs:
           path: melat-v1.0-windows-bundle.zip
           if-no-files-found: error
           retention-days: 30
+
+  windows-package-check:
+    needs: verify
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: melat-v1.0-windows-bundle
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Extract and validate Windows release
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP "melat-package-check"
+          Expand-Archive -LiteralPath (Join-Path $env:GITHUB_WORKSPACE "melat-v1.0-windows-bundle.zip") -DestinationPath $destination -Force
+          $root = Join-Path $destination "Melat"
+          $required = @(
+            "INSTALL-MELAT.bat",
+            "scripts/setup-local-melat.ps1",
+            "client/dist/index.html",
+            "server/dist/index.js",
+            "server/dist/security/passwords.js",
+            "server/scripts/bootstrap-owner.mjs",
+            "server/scripts/migrate.mjs",
+            "node_modules/pg/package.json"
+          )
+          foreach ($relative in $required) {
+            $path = Join-Path $root $relative
+            if (-not (Test-Path -LiteralPath $path)) { throw "Release is missing required file: $relative" }
+          }
+          [void][scriptblock]::Create((Get-Content (Join-Path $root "scripts/setup-local-melat.ps1") -Raw))
+          node --check (Join-Path $root "server/dist/index.js")
+          if ($LASTEXITCODE -ne 0) { throw "Compiled API entry point failed Node syntax validation." }
+          node --check (Join-Path $root "server/scripts/bootstrap-owner.mjs")
+          if ($LASTEXITCODE -ne 0) { throw "Owner bootstrap script failed Node syntax validation." }
+          Write-Output "Windows package extraction, required-file checks, PowerShell parsing and Node syntax checks passed."
