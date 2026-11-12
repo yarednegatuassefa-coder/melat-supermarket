@@ -17,10 +17,7 @@ Do not point Melat at the unrelated cloudlrestaurant-orders database. No cloud d
 
 ## First-time local setup
 
-From the repository root, run PowerShell as the store administrator:
-
-    Set-ExecutionPolicy -Scope Process Bypass
-    .\scripts\setup-local-melat.ps1
+Extract the Windows release bundle, then double-click INSTALL-MELAT.bat and approve the Windows administrator prompt. The launcher invokes the setup script with the required permissions.
 
 The setup script writes server/.env. This is deliberate: npm runs workspace scripts with server/ as the working directory, so the API, migration runner and owner bootstrap load dotenv from that directory. It prompts for the existing melat_app password and a unique 16+ character owner password, applies migrations, creates the initial owner only if one does not already exist, clears the temporary bootstrap values, starts the API and checks both PostgreSQL and schema readiness.
 
@@ -34,13 +31,11 @@ The API health check must report status=ok, database=connected, and schema=ready
 
 1. Give the store server a DHCP reservation in the router. Do not rely on a changing IP.
 2. Install the official Caddy Windows binary and make sure caddy.exe is on PATH.
-3. Run elevated PowerShell from the repository root:
+3. Double-click ENABLE-LAN-MELAT.bat and approve the Windows administrator prompt. The launcher validates Caddy, configures the firewall, enables secure cookies and trusted-proxy handling, and restarts the local API.
 
-       .\scripts\enable-lan-access.ps1
-
-4. Configure the store router's local DNS, or each staff device's hosts file, so melat.local resolves to the reserved server IP.
+4. Configure the store router's local DNS, or each staff device's hosts file, so melat.home.arpa resolves to the reserved server IP.
 5. Export the Caddy local root certificate from the server path printed by the script. Transfer it to each trusted cashier device over a controlled channel and install it into that device's Trusted Root Certification Authorities store. Never distribute the CA private key.
-6. Restart the Melat Local API scheduled task. Confirm https://melat.local/api/health reports database and schema ready from each cashier terminal.
+6. Confirm https://melat.home.arpa/api/health reports database and schema ready from each cashier terminal.
 
 The firewall script blocks inbound TCP 4000 and 5432 and permits TCP 443 only from the local subnet on Private/Domain profiles. Do not create router port-forwarding rules. The API and PostgreSQL remain loopback-only; Caddy is the only LAN-facing service.
 

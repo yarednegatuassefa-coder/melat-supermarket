@@ -1,4 +1,4 @@
-https://melat.local {
+https://melat.home.arpa {
   tls internal
   encode zstd gzip
   header {
