@@ -37,4 +37,4 @@ Features are not considered production-ready until code, automated tests and sto
 
 ## Security
 
-Do not commit passwords, API keys, database dumps, customer data, production credentials or real payment credentials. Use .env.example as a template and keep actual .env files untracked.
+Do not commit passwords, API keys, database dumps, customer data, production credentials or real payment credentials. Use .env.example as a template and keep actual server/.env files untracked.
