@@ -1,10 +1,10 @@
 #Requires -RunAsAdministrator
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$envFile = Join-Path $repoRoot ".env"
+$envFile = Join-Path $repoRoot "server\.env"
 $caddy = Get-Command caddy -ErrorAction SilentlyContinue
 if (-not $caddy) { throw "Caddy is not installed or is not on PATH. Install Caddy before enabling LAN access." }
-if (-not (Test-Path $envFile)) { throw "Run scripts/setup-local-melat.ps1 first; .env was not found." }
+if (-not (Test-Path $envFile)) { throw "Run scripts/setup-local-melat.ps1 first; server/.env was not found." }
 $caddyfile = Join-Path $repoRoot "deploy\Caddyfile"
 & $caddy.Source validate --config $caddyfile --adapter caddyfile
 if ($LASTEXITCODE -ne 0) { throw "Caddyfile validation failed." }
