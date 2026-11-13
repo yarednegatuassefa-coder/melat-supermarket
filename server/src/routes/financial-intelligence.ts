@@ -54,10 +54,14 @@ export function financialIntelligenceRoutes(pool: Pool) {
 
       const supplierExposure = await pool.query(
         `SELECT count(*)::int AS open_invoices,
-          COALESCE(sum(total_amount - amount_paid),0)::text AS outstanding_etb
-         FROM supplier_invoices
-         WHERE status IN ('posted','partially_paid')`
-      ).catch(() => ({ rows: [{ open_invoices: 0, outstanding_etb: "0" }] }));
+          COALESCE(sum(si.total_amount - COALESCE((
+            SELECT sum(spa.amount) FROM supplier_payment_allocations spa
+            JOIN supplier_payments sp ON sp.id=spa.payment_id
+            WHERE spa.invoice_id=si.id AND sp.status='confirmed'
+          ),0)),0)::text AS outstanding_etb
+         FROM supplier_invoices si
+         WHERE si.status IN ('posted','partially_paid')`
+      );
 
       const data = monthly.rows.map((row) => ({
         ...row,
