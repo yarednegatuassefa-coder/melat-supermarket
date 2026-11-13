@@ -233,3 +233,57 @@ footer span{color:#a3aea6}
   .login-panel{padding:27px 23px}
   footer{gap:10px;flex-direction:column}
 }
+
+
+/* Financial Intelligence — read-only management analytics */
+.fi-page{display:grid;gap:18px}
+.fi-hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:30px 34px;border-radius:16px;background:linear-gradient(120deg,#123b32,#28624d);color:#f8fff9;overflow:hidden}
+.fi-hero .eyebrow{color:#bdd6c6}
+.fi-hero h2{font-size:clamp(26px,3vw,38px);line-height:1.08;letter-spacing:-1px;margin:12px 0;font-weight:700}
+.fi-hero p{max-width:520px;color:#d1e1d6;font-size:12px;line-height:1.7;margin:0}
+.fi-hero-mark{width:108px;height:108px;border:1px solid #ffffff40;border-radius:50%;display:grid;place-items:center;font:68px Georgia,serif;color:#d7e9d9;flex-shrink:0}
+.fi-toolbar{display:flex;align-items:end;justify-content:space-between;gap:15px}
+.fi-toolbar h2{margin:5px 0 0;font-size:21px;letter-spacing:-.4px}
+.fi-toolbar label{display:grid;gap:5px;font-size:10px;color:#718078;font-weight:700}
+.fi-toolbar select{border:1px solid #dce5df;border-radius:8px;background:white;padding:9px 12px;color:#233d32}
+.fi-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.fi-kpis article,.fi-panel{background:white;border:1px solid #e4eae6;border-radius:13px;box-shadow:0 8px 24px #183d3508}
+.fi-kpis article{padding:17px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.fi-kpis span{font-size:9px;letter-spacing:1.1px;color:#839187;font-weight:800}
+.fi-kpis strong{font-size:clamp(17px,2vw,23px);font-variant-numeric:tabular-nums;letter-spacing:-.5px;overflow-wrap:anywhere}
+.fi-kpis small,.fi-panel-head small{font-size:10px;color:#87948c}
+.fi-kpis .negative{color:#a3483e}
+.fi-panel{padding:20px;min-width:0}
+.fi-panel-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin-bottom:18px}
+.fi-panel-head h3{margin:5px 0 0;font-size:17px;letter-spacing:-.3px}
+.fi-chart{height:220px;display:flex;align-items:stretch;gap:12px;border-bottom:1px solid #e7ede8;padding:8px 4px 0}
+.fi-chart-month{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:end;gap:7px}
+.fi-bars{height:165px;width:min(100%,44px);display:flex;align-items:end;justify-content:center;gap:4px}
+.fi-bars span{width:42%;min-height:3px;border-radius:5px 5px 0 0}
+.fi-bars .revenue,.fi-legend .revenue{background:#4b8b68}
+.fi-bars .expense,.fi-legend .expense{background:#d6a45b}
+.fi-chart-month b{font-size:10px;color:#46584d}
+.fi-chart-month small{font-size:9px;color:#87948c;white-space:nowrap}
+.fi-legend{display:flex;gap:18px;margin-top:14px;color:#728178;font-size:10px}
+.fi-legend span{display:flex;align-items:center;gap:6px}
+.fi-legend i{display:inline-block;width:8px;height:8px;border-radius:2px}
+.fi-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fi-insights{display:grid;gap:9px}
+.fi-insights article{padding:12px 13px;border-radius:9px;background:#f5f8f5;border:1px solid #e6ede7}
+.fi-insights article.warning{background:#fff8ed;border-color:#f1e2c8}
+.fi-insights b{font-size:12px}
+.fi-insights p{font-size:11px;line-height:1.6;color:#6c7a71;margin:5px 0 0}
+.fi-recurring{display:grid}
+.fi-recurring>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #edf1ed}
+.fi-recurring>div:last-child{border-bottom:0}
+.fi-recurring b{font-size:11px}
+.fi-recurring small{display:block;color:#88958d;font-size:9px;margin-top:4px}
+.fi-recurring strong{text-align:right;font-size:12px;white-space:nowrap}
+.fi-empty{padding:24px;text-align:center;background:#f7f9f7;border:1px dashed #dbe5dd;border-radius:10px;color:#75847a;font-size:12px;line-height:1.6}
+.fi-error{padding:13px;background:#fff0ed;border:1px solid #f0d2ca;color:#963f34;border-radius:9px;font-size:12px}
+.fi-limitations{padding:14px 16px;background:#f8faf8;border:1px solid #e4eae6;border-radius:10px;color:#718078;font-size:11px}
+.fi-limitations summary{cursor:pointer;font-weight:700;color:#42574a}
+.fi-limitations li{margin:7px 0;line-height:1.5}
+.fi-limitations>small{display:block;margin-top:10px}
+@media(max-width:1000px){.fi-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fi-columns{grid-template-columns:1fr}}
+@media(max-width:620px){.fi-hero{padding:23px}.fi-hero-mark{width:68px;height:68px;font-size:42px}.fi-kpis{grid-template-columns:1fr 1fr}.fi-kpis article{padding:13px}.fi-chart{gap:5px}.fi-chart-month small{font-size:8px}.fi-toolbar{align-items:flex-start;flex-direction:column}}
