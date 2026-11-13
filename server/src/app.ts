@@ -12,6 +12,7 @@ import { inventoryRoutes } from "./routes/inventory.js";
 import { salesRoutes } from "./routes/sales.js";
 import { purchasingRoutes } from "./routes/purchasing.js";
 import { financeRoutes } from "./routes/finance.js";
+import { financialIntelligenceRoutes } from "./routes/financial-intelligence.js";
 
 const app = express();
 const pool = process.env.DATABASE_URL ? new Pool({
@@ -60,6 +61,7 @@ if (pool) {
   app.use("/api/sales", salesRoutes(pool));
   app.use("/api/purchasing", purchasingRoutes(pool));
   app.use("/api/finance", financeRoutes(pool));
+  app.use("/api/finance-intelligence", financialIntelligenceRoutes(pool));
 } else {
   app.use("/api", (_req, res) => res.status(503).json({ error: "Melat database is not connected. The store administrator must complete database setup." }));
 }
