@@ -115,8 +115,21 @@ export async function createSale(pool:Pool, input:{actorId:string;cashSessionId:
   const client=await pool.connect();
   try{
     await client.query("BEGIN"); await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
-    const prior=await client.query("SELECT id,status FROM sales WHERE idempotency_key=$1",[input.idempotencyKey]);
-    if(prior.rowCount){await client.query("COMMIT");return {saleId:prior.rows[0].id,status:prior.rows[0].status,replayed:true};}
+    const prior=await client.query("SELECT id,status,sale_number,total_amount::text FROM sales WHERE idempotency_key=$1",[input.idempotencyKey]);
+    if(prior.rowCount){
+      const existing=prior.rows[0];
+      const priorPayments=await client.query("SELECT id,method,status FROM sale_payments WHERE sale_id=$1 ORDER BY id",[existing.id]);
+      await client.query("COMMIT");
+      return {
+        saleId:existing.id,
+        saleNumber:existing.sale_number,
+        total:amount(money(existing.total_amount)),
+        status:existing.status==="draft"?"awaiting_payment":existing.status,
+        pendingPaymentIds:priorPayments.rows.filter(p=>p.method!=="cash"&&p.status==="pending").map(p=>p.id),
+        receiptUrl:"/api/sales/"+existing.id+"/receipt",
+        replayed:true
+      };
+    }
     const session=await client.query("SELECT id FROM cash_sessions WHERE id=$1 AND cashier_id=$2 AND status='open' FOR UPDATE",[input.cashSessionId,input.actorId]);
     if(!session.rowCount) throw new Error("Open cash drawer not found for this cashier.");
     if(!input.lines.length||!input.payments.length) throw new Error("At least one item and one payment are required.");
