@@ -56,6 +56,15 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     const checkout=await createSale(pool,{actorId:user,cashSessionId:session,idempotencyKey:"it-sale-"+suffix,lines:[{productId:product,quantity:"2"}],payments:[{method:"cash",amount:"10"},{method:"cbe",amount:"15",providerReference:"IT-CBE-"+suffix},{method:"telebirr",amount:"15",providerReference:"IT-TB-"+suffix}]});
     assert.equal(checkout.status,"awaiting_payment");
     assert.equal(checkout.pendingPaymentIds?.length,2,"each electronic tender must remain independently verifiable");
+    const replayedCheckout=await createSale(pool,{actorId:user,cashSessionId:session,idempotencyKey:"it-sale-"+suffix,lines:[{productId:product,quantity:"2"}],payments:[{method:"cash",amount:"10"},{method:"cbe",amount:"15",providerReference:"IT-CBE-"+suffix},{method:"telebirr",amount:"15",providerReference:"IT-TB-"+suffix}]});
+    assert.equal(replayedCheckout.saleId,checkout.saleId,"retry must resolve to the original sale");
+    assert.equal(replayedCheckout.saleNumber,checkout.saleNumber,"retry must return the original sale number");
+    assert.equal(replayedCheckout.status,"awaiting_payment","retry must preserve the pending-payment state");
+    assert.deepEqual(replayedCheckout.pendingPaymentIds,checkout.pendingPaymentIds,"retry must return the original pending electronic tenders");
+    assert.equal(replayedCheckout.receiptUrl,checkout.receiptUrl,"retry must return the original receipt endpoint");
+    assert.equal(replayedCheckout.replayed,true);
+    const idempotentCount=await pool.query("SELECT count(*)::int count FROM sales WHERE idempotency_key=$1",["it-sale-"+suffix]);
+    assert.equal(idempotentCount.rows[0].count,1,"a retry must not create a second sale");
     const stillOnHand=await pool.query("SELECT quantity_on_hand::text qty,reserved_quantity::text reserved FROM inventory_balances WHERE product_id=$1",[product]);
     assert.equal(Number(stillOnHand.rows[0].qty),20,"pending electronic tender must not decrement physical stock");
     assert.equal(Number(stillOnHand.rows[0].reserved),2,"pending checkout must reserve its sellable stock");
