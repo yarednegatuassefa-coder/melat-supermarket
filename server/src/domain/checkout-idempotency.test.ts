@@ -16,15 +16,18 @@ test("reuses a key for an identical retry after a network failure", () => {
   assert.equal(generated, 1);
 });
 
-test("creates a new key when the checkout payload changes", () => {
+test("blocks payload changes while the previous checkout result is uncertain", () => {
   const state = { current: null };
   let generated = 0;
   const createKey = () => "test-key-" + (++generated);
 
   const first = getCheckoutIdempotencyKey(state, { quantity: "1" }, createKey);
-  const changed = getCheckoutIdempotencyKey(state, { quantity: "2" }, createKey);
+  assert.throws(() => getCheckoutIdempotencyKey(state, { quantity: "2" }, createKey), /previous checkout may have been saved/);
+  assert.equal(getCheckoutIdempotencyKey(state, { quantity: "1" }, createKey), first);
+  assert.equal(generated, 1);
 
-  assert.equal(first, "test-key-1");
-  assert.equal(changed, "test-key-2");
-  assert.notEqual(changed, first);
+  // A definite 4xx rejection clears the state so the corrected request gets a fresh key.
+  state.current = null;
+  const corrected = getCheckoutIdempotencyKey(state, { quantity: "2" }, createKey);
+  assert.equal(corrected, "test-key-2");
 });
