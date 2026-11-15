@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { getCheckoutIdempotencyKey } from "./checkout-idempotency.mjs";
 type Product={id:string;sku:string;name_en:string;quantity_on_hand:string;available_to_sell?:string;reserved_quantity?:string;selling_price:string|null;base_unit:string};
 type Supplier={id:string;supplier_code:string;name:string};
 type Session={id:string;session_number:string};
@@ -30,13 +31,10 @@ export function PosScreen(){
   const paid=tenders.reduce((s,t)=>s+Number(t.amount||0),0);
   if(Math.abs(paid-total)>0.00005){setMessage("Split payments must equal the cart total.");return;}
   const payload={cashSessionId:session.id,lines:cart.map(x=>({productId:x.product.id,quantity:x.quantity,taxRateId:taxRateId||null})),payments:tenders.map(t=>({method:t.method,amount:t.amount,providerReference:t.providerReference||undefined}))};
-  const fingerprint=JSON.stringify(payload);
-  if(!checkoutKeyRef.current||checkoutKeyRef.current.fingerprint!==fingerprint){
-   checkoutKeyRef.current={fingerprint,key:crypto.randomUUID()};
-  }
+  const idempotencyKey=getCheckoutIdempotencyKey(checkoutKeyRef,payload,()=>crypto.randomUUID());
   setBusy(true);setMessage("");
   try{
-   const r=await api<{saleId:string;saleNumber:string;status:string;receiptUrl:string;pendingPaymentIds:string[];replayed?:boolean}>("/api/sales/checkout",{method:"POST",body:JSON.stringify({...payload,idempotencyKey:checkoutKeyRef.current.key})});
+   const r=await api<{saleId:string;saleNumber:string;status:string;receiptUrl:string;pendingPaymentIds:string[];replayed?:boolean}>("/api/sales/checkout",{method:"POST",body:JSON.stringify({...payload,idempotencyKey})});
    setReceipt(r.receiptUrl);setSaleId(r.saleId);setPendingPaymentIds(r.pendingPaymentIds??[]);setVerifyRefs({});
    setMessage((r.replayed?"Recovered saved sale ":"Sale ")+r.saleNumber+": "+r.status.replaceAll("_"," "));
    setCart([]);setTenders([{method:"cash",amount:"0",providerReference:""}]);checkoutKeyRef.current=null;await load();
