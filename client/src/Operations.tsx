@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { getCheckoutIdempotencyKey } from "./checkout-idempotency.mjs";
 type Product={id:string;sku:string;name_en:string;quantity_on_hand:string;available_to_sell?:string;reserved_quantity?:string;selling_price:string|null;base_unit:string};
 type Supplier={id:string;supplier_code:string;name:string};
 type Session={id:string;session_number:string};
 type TaxRate={id:string;name:string;rate:string};
 type Batch={id:string;product_id:string;name_en:string;supplier_id:string|null;remaining_quantity:string};
-async function api<T>(path:string,init?:RequestInit):Promise<T>{const r=await fetch(path,{...init,credentials:"include",headers:{"Content-Type":"application/json",...(init?.headers??{})}});const b=await r.json().catch(()=>({}));if(!r.ok)throw new Error(b.error??"Request failed ("+r.status+")");return b as T;}
+class ApiError extends Error { constructor(message:string,readonly status:number){super(message);this.name="ApiError";} }
+async function api<T>(path:string,init?:RequestInit):Promise<T>{const r=await fetch(path,{...init,credentials:"include",headers:{"Content-Type":"application/json",...(init?.headers??{})}});const b=await r.json().catch(()=>({}));if(!r.ok)throw new ApiError(b.error??"Request failed ("+r.status+")",r.status);return b as T;}
 const money=(n:number)=>new Intl.NumberFormat("en-ET",{style:"currency",currency:"ETB"}).format(n);
 function Panel({title,children}:{title:string;children:ReactNode}){return <section className="operation-panel"><h2>{title}</h2>{children}</section>}
 function Notice({value}:{value:string}){return value?<p className="operation-notice">{value}</p>:null}
 
 export function PosScreen(){
+ const checkoutKeyRef=useRef<{fingerprint:string;key:string}|null>(null);
  const [products,setProducts]=useState<Product[]>([]),[session,setSession]=useState<Session|null>(null),[pendingSales,setPendingSales]=useState<any[]>([]),[opening,setOpening]=useState("0"),[query,setQuery]=useState(""),[taxRates,setTaxRates]=useState<TaxRate[]>([]),[taxRateId,setTaxRateId]=useState("");
  const [cart,setCart]=useState<{product:Product;quantity:string}[]>([]),[tenders,setTenders]=useState<{method:string;amount:string;providerReference:string}[]>([{method:"cash",amount:"0",providerReference:""}]);
  const [message,setMessage]=useState(""),[busy,setBusy]=useState(false),[receipt,setReceipt]=useState(""),[saleId,setSaleId]=useState(""),[pendingPaymentIds,setPendingPaymentIds]=useState<string[]>([]),[verifyRefs,setVerifyRefs]=useState<Record<string,string>>({});
@@ -24,7 +27,21 @@ export function PosScreen(){
  const filtered=products.filter(p=>p.name_en.toLowerCase().includes(query.toLowerCase())||p.sku.toLowerCase().includes(query.toLowerCase())).slice(0,30);
  async function open(){setBusy(true);try{const r=await api<{session:Session}>("/api/sales/cash-sessions/open",{method:"POST",body:JSON.stringify({openingCash:opening})});setSession(r.session);setMessage("Cash drawer opened.");}catch(e){setMessage((e as Error).message);}finally{setBusy(false);}}
  function add(p:Product){setCart(old=>{const f=old.find(x=>x.product.id===p.id);return f?old.map(x=>x.product.id===p.id?{...x,quantity:String(Number(x.quantity)+1)}:x):[...old,{product:p,quantity:"1"}]});}
- async function checkout(){if(!session){setMessage("Open a cash drawer first.");return;}const paid=tenders.reduce((s,t)=>s+Number(t.amount||0),0);if(Math.abs(paid-total)>0.00005){setMessage("Split payments must equal the cart total.");return;}setBusy(true);setMessage("");try{const r=await api<{saleId:string;saleNumber:string;status:string;receiptUrl:string;pendingPaymentIds:string[]}>("/api/sales/checkout",{method:"POST",body:JSON.stringify({cashSessionId:session.id,idempotencyKey:crypto.randomUUID(),lines:cart.map(x=>({productId:x.product.id,quantity:x.quantity,taxRateId:taxRateId||null})),payments:tenders.map(t=>({method:t.method,amount:t.amount,providerReference:t.providerReference||undefined}))})});setReceipt(r.receiptUrl);setSaleId(r.saleId);setPendingPaymentIds(r.pendingPaymentIds??[]);setVerifyRefs({});setMessage("Sale "+r.saleNumber+": "+r.status.replaceAll("_"," "));setCart([]);setTenders([{method:"cash",amount:"0",providerReference:""}]);await load();}catch(e){setMessage((e as Error).message);}finally{setBusy(false);}}
+ async function checkout(){
+  if(!session){setMessage("Open a cash drawer first.");return;}
+  const paid=tenders.reduce((s,t)=>s+Number(t.amount||0),0);
+  if(Math.abs(paid-total)>0.00005){setMessage("Split payments must equal the cart total.");return;}
+  const payload={cashSessionId:session.id,lines:cart.map(x=>({productId:x.product.id,quantity:x.quantity,taxRateId:taxRateId||null})),payments:tenders.map(t=>({method:t.method,amount:t.amount,providerReference:t.providerReference||undefined}))};
+  setBusy(true);setMessage("");
+  try{
+   const idempotencyKey=getCheckoutIdempotencyKey(checkoutKeyRef,payload,()=>crypto.randomUUID());
+   const r=await api<{saleId:string;saleNumber:string;status:string;receiptUrl:string;pendingPaymentIds:string[];replayed?:boolean}>("/api/sales/checkout",{method:"POST",body:JSON.stringify({...payload,idempotencyKey})});
+   setReceipt(r.receiptUrl);setSaleId(r.saleId);setPendingPaymentIds(r.pendingPaymentIds??[]);setVerifyRefs({});
+   setMessage((r.replayed?"Recovered saved sale ":"Sale ")+r.saleNumber+": "+r.status.replaceAll("_"," "));
+   setCart([]);setTenders([{method:"cash",amount:"0",providerReference:""}]);checkoutKeyRef.current=null;await load();
+  }catch(e){if(e instanceof ApiError&&e.status>=400&&e.status<500)checkoutKeyRef.current=null;setMessage((e as Error).message);}
+  finally{setBusy(false);}
+ }
  async function verifyPayment(id:string){try{const result=await api<any>("/api/sales/"+saleId+"/payments/"+id+"/verify",{method:"POST",body:JSON.stringify({providerReference:verifyRefs[id]})});setMessage(JSON.stringify(result));setPendingPaymentIds(old=>old.filter(x=>x!==id));}catch(e){setMessage((e as Error).message);}}
  async function verifyPendingPayment(pendingSaleId:string,paymentId:string){try{const result=await api<any>("/api/sales/"+pendingSaleId+"/payments/"+paymentId+"/verify",{method:"POST",body:JSON.stringify({providerReference:verifyRefs[paymentId]})});setMessage(JSON.stringify(result));await load();}catch(e){setMessage((e as Error).message);}}
  async function cancelPending(pendingSaleId:string){try{await api<any>("/api/sales/"+pendingSaleId+"/cancel",{method:"POST",body:JSON.stringify({})});setMessage("Pending checkout cancelled and reserved stock released.");await load();}catch(e){setMessage((e as Error).message);}}
