@@ -29,6 +29,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - name: Harness preflight
+        run: npm run harness:check
       - name: Run domain and PostgreSQL integration tests
         run: npm test
       - name: Build API and client
