@@ -125,7 +125,7 @@ export async function createSale(pool:Pool, input:{actorId:string;cashSessionId:
         saleNumber:existing.sale_number,
         total:amount(money(existing.total_amount)),
         status:existing.status==="draft"?"awaiting_payment":existing.status,
-        pendingPaymentIds:priorPayments.rows.filter(p=>p.method!=="cash"&&p.status==="pending").map(p=>p.id),
+        pendingPaymentIds:priorPayments.rows.filter(p=>p.method!=="cash"&&p.status==="pending").map(p=>p.id).sort(),
         receiptUrl:"/api/sales/"+existing.id+"/receipt",
         replayed:true
       };
@@ -186,6 +186,6 @@ export async function createSale(pool:Pool, input:{actorId:string;cashSessionId:
     if(!pending) await finalizeSale(client,sale.rows[0].id,input.actorId);
     await client.query("INSERT INTO audit_log(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'create','sale',$2,$3::jsonb)",[input.actorId,sale.rows[0].id,JSON.stringify({saleNumber,total:amount(total),paymentCount:input.payments.length})]);
     await client.query("COMMIT");
-    return {saleId:sale.rows[0].id,saleNumber,total:amount(total),status:pending?"awaiting_payment":"posted",pendingPaymentIds:pending?paymentIds.filter((_,i)=>input.payments[i].method!=="cash"):[],receiptUrl:`/api/sales/${sale.rows[0].id}/receipt`};
+    return {saleId:sale.rows[0].id,saleNumber,total:amount(total),status:pending?"awaiting_payment":"posted",pendingPaymentIds:pending?paymentIds.filter((_,i)=>input.payments[i].method!=="cash").sort():[],receiptUrl:`/api/sales/${sale.rows[0].id}/receipt`};
   }catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}
 }

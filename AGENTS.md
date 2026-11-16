@@ -26,6 +26,9 @@ Existing code and migrations are authoritative for current implementation; docum
 - Tax treatment is configurable and must be confirmed by the accountant; never hardcode a universal VAT rate.
 - Customer credit, receivables, loyalty, multi-branch, AI financial decisions and unapproved enterprise scope are excluded from V1.
 
+## Harness lifecycle
+Before substantial work, read `harness/README.md`, `harness/feature-list.json` and the latest `harness/progress.md` entry. Run `npm run harness:check` before project tests. Keep store acceptance evidence separate from CI results.
+
 ## Required task protocol
 1. Inspect the repository and relevant tests before proposing a change.
 2. Write a short task spec: objective, business reason, constraints, out-of-scope items, acceptance criteria and verification command(s).
