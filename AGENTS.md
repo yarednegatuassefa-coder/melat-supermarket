@@ -51,3 +51,16 @@ From repository root:
 - GitHub Actions `Melat CI` — authoritative hosted PostgreSQL test/build and Windows bundle validation.
 
 If a command cannot run in the current environment, state that plainly. Never substitute an assumed pass.
+
+## Shared skills and portfolio standards
+Home is the portfolio coordination repository, not a source-code monorepo. Its shared skills and standards are available at:
+- [Home repository guide](https://github.com/yarednegatuassefa-coder/home/blob/main/README.md)
+- [Home agent instructions](https://github.com/yarednegatuassefa-coder/home/blob/main/AGENTS.md)
+- [Shared skill catalog and routing](https://github.com/yarednegatuassefa-coder/home/blob/main/skills/README.md)
+- [Portfolio map and instruction precedence](https://github.com/yarednegatuassefa-coder/home/blob/main/architecture/portfolio-map.md)
+
+For a task that matches a specialized workflow, consult the Home catalog and read the relevant skill and integration guidance. Examples: substantial UI/UX work or demos → portfolio design research and the matching design/demo skill; schema, data-model, or migration work → portfolio database architecture; an explicitly requested security audit → portfolio security-audit guidance and its upstream audit workflow; SEO/GEO → portfolio SEO; mapping → portfolio geospatial; documentation/code review/project planning/social content → the matching Home skill; research-led media or video → Research-to-Video, Animated Shorts, or Motion Studio only when that deliverable is requested. The Home catalog is the source of truth for the full, current collection.
+
+Use only the skill or skills relevant to the requested deliverable; do not chain or execute every skill just because it is available. Melat's business invariants, task protocol, and repository-specific rules take precedence. Preserve the existing `.agents/skills/` files; Home skills supplement them and must not replace or duplicate them.
+
+Skill availability does not authorize tool/dependency installation, paid API or model use, external account connections, production-data access, migrations, deployment, or publication. Obtain separate explicit authorization before any such cost-incurring or externally consequential action. Never expose real customer, employee, supplier, inventory, payment, accounting, or transaction data to external tools or agents.
