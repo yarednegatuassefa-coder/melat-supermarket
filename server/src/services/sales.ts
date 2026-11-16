@@ -125,7 +125,7 @@ export async function createSale(pool:Pool, input:{actorId:string;cashSessionId:
         saleNumber:existing.sale_number,
         total:amount(money(existing.total_amount)),
         status:existing.status==="draft"?"awaiting_payment":existing.status,
-        pendingPaymentIds:priorPayments.rows.filter(p=>p.method!=="cash"&&p.status==="pending").map(p=>p.id),
+        pendingPaymentIds:priorPayments.rows.filter(p=>p.method!=="cash"&&p.status==="pending").map(p=>p.id).sort(),
         receiptUrl:"/api/sales/"+existing.id+"/receipt",
         replayed:true
       };
