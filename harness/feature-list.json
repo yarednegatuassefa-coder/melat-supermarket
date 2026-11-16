@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "project": "melat-supermarket",
+  "updated_at": "2026-11-16",
+  "features": [
+    {
+      "id": "HARN-001",
+      "title": "Domain-specific harness and accounting/inventory safety gates",
+      "status": "implemented_unverified",
+      "priority": "critical",
+      "acceptance_criteria": [
+        "Agent follows business invariants and required task protocol",
+        "Production database and destructive actions remain approval-gated"
+      ],
+      "verification": [
+        "Review AGENTS.md",
+        "Review harness/README.md"
+      ],
+      "risk": "high",
+      "owner_approval_required": true,
+      "evidence": [],
+      "notes": "Documented guardrails; operational enforcement still requires owner acceptance."
+    },
+    {
+      "id": "HARN-002",
+      "title": "Deterministic harness preflight",
+      "status": "planned",
+      "priority": "high",
+      "acceptance_criteria": [
+        "Preflight validates core docs and package scripts",
+        "Test database configuration is checked without printing credentials"
+      ],
+      "verification": [
+        "npm run harness:check"
+      ],
+      "risk": "low",
+      "owner_approval_required": false,
+      "evidence": [],
+      "notes": "Implementation in this PR."
+    },
+    {
+      "id": "HARN-003",
+      "title": "CI test/build and Windows bundle verification",
+      "status": "implemented_unverified",
+      "priority": "high",
+      "acceptance_criteria": [
+        "Hosted PostgreSQL integration tests and builds run",
+        "Windows package artifact is extracted and structurally validated"
+      ],
+      "verification": [
+        "GitHub Actions Melat CI run"
+      ],
+      "risk": "medium",
+      "owner_approval_required": false,
+      "evidence": [],
+      "notes": "Workflow exists; current PR run evidence is pending."
+    },
+    {
+      "id": "HARN-004",
+      "title": "Durable task state and acceptance evidence",
+      "status": "implemented_unverified",
+      "priority": "high",
+      "acceptance_criteria": [
+        "Feature ledger and append-only progress log exist",
+        "Acceptance checklist remains distinct from CI"
+      ],
+      "verification": [
+        "Review harness/feature-list.json",
+        "Review harness/progress.md",
+        "Review docs/acceptance-plan.md"
+      ],
+      "risk": "medium",
+      "owner_approval_required": true,
+      "evidence": [],
+      "notes": "Harness state added; store acceptance and backup restore remain separate work."
+    }
+  ]
+}
