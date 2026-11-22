@@ -67,3 +67,7 @@ For a task that matches a specialized workflow, consult the Home catalog and rea
 Use only the skill or skills relevant to the requested deliverable; do not chain or execute every skill just because it is available. Melat's business invariants, task protocol, and repository-specific rules take precedence. Preserve the existing `.agents/skills/` files; Home skills supplement them and must not replace or duplicate them.
 
 Skill availability does not authorize tool/dependency installation, paid API or model use, external account connections, production-data access, migrations, deployment, or publication. Obtain separate explicit authorization before any such cost-incurring or externally consequential action. Never expose real customer, employee, supplier, inventory, payment, accounting, or transaction data to external tools or agents.
+
+
+## Code-mode agent architecture
+For any AI/tool orchestration task, consult the portfolio [Code-Mode Agent Engineering Standard](https://github.com/yarednegatuassefa-coder/home/blob/main/standards/code-mode-agent-engineering.md), [Portfolio Code-Mode skill](https://github.com/yarednegatuassefa-coder/home/blob/main/skills/portfolio-code-mode/SKILL.md), and this repository's `docs/agent-code-mode.md`. This guidance does not grant production access, external model use, patient/customer data transfer, writes, deployment or other approvals. Project-specific safeguards above remain authoritative.
