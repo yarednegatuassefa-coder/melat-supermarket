@@ -35,6 +35,10 @@ See docs/local-deployment.md before installing the system.
 
 Features are not considered production-ready until code, automated tests and store acceptance evidence exist. A successful Vercel build is not proof that the store POS is operational.
 
+## Workflow governance
+
+See [workflow governance and evaluation](docs/workflow-governance.md) and the portfolio [Workflow Quality and Evaluation Standard](https://github.com/yarednegatuassefa-coder/home/blob/main/standards/workflow-quality.md). These documents define the minimum workflow specification, evaluation, recovery and measurement requirements; they do not replace store acceptance evidence.
+
 ## Security
 
 Do not commit passwords, API keys, database dumps, customer data, production credentials or real payment credentials. Use .env.example as a template and keep actual server/.env files untracked.
