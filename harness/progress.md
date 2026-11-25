@@ -19,3 +19,10 @@
 - **Not run / blocked:** No store PC, production database, migration, financial posting, deployment or live cash drawer was accessed.
 - **Approval boundary:** Store acceptance remains owner-led; no financial transaction was created.
 - **Next action:** Review CI results and independent diff review before merge; then perform owner-led store acceptance on the local-first installation.
+
+## 2026-11-25 — HARN-005 VERIFIED
+- **Merged PR:** #12 — exact ETB arithmetic for cash drawer controls.
+- **Merge commit:** bdf8b8289af1b0b29c9d48bd7a1acfe6d4c74c13
+- **Verification:** Melat CI passed harness preflight, domain and disposable PostgreSQL integration tests, API/client build, Windows bundle assembly and Windows extraction/structural validation.
+- **Scope:** Cash drawer expected balance, availability and close variance use exact 1/10,000 ETB units. No live store database, store PC or financial transaction was accessed.
+- **Remaining:** Owner-led local store acceptance is required. Other monetary calculations in sales, refunds and financial reporting require separate review; this PR does not certify all financial arithmetic as exact.
