@@ -2,11 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { assertCashAvailable, expectedCashDrawerBalance } from "../services/cash-drawer.js";
 
-function fakeClient(row, capture = {}) {
+type CashAggregate = { opening_cash: string; cash_sales: string; cash_expenses: string; cash_refunds: string; drawer_movements: string };
+
+function fakeClient(row: CashAggregate, capture: { sql?: string } = {}) {
   return {
-    async query(sql, values) {
+    async query(sql: string) {
       capture.sql = sql;
-      capture.values = values;
       return { rows: [row], rowCount: 1 };
     },
   } as never;
@@ -25,7 +26,7 @@ test("cash drawer aggregates return an exact four-decimal ETB balance", async ()
   const actual = await expectedCashDrawerBalance(fakeClient(exactBalance, capture), "session-1");
 
   assert.equal(actual, "100.1001");
-  assert.match(capture.sql, /p\.method='cash'/);
+  assert.match(capture.sql ?? "", /p\.method='cash'/);
   assert.match(capture.sql, /p\.status IN \('confirmed','settled'\)/);
   assert.match(capture.sql, /e\.payment_method='cash' AND e\.status='posted'/);
   assert.match(capture.sql, /r\.payment_method='cash' AND r\.status='posted'/);
