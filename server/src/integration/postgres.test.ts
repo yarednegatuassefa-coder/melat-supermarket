@@ -120,7 +120,7 @@ test("PostgreSQL schema migrations and integrity controls", {skip:!url}, async()
     const drawerClient=await pool.connect();
     try{
       const expected=await expectedCashDrawerBalance(drawerClient,session);
-      assert.equal(expected,110,"drawer should contain opening float plus confirmed cash tender after refund reversal");
+      assert.equal(expected,"110.0000","drawer should contain opening float plus confirmed cash tender after refund reversal");
       await assertCashAvailable(drawerClient,session,"110");
       await assert.rejects(()=>assertCashAvailable(drawerClient,session,"111"),/Insufficient cash in drawer/);
     }finally{drawerClient.release();}
