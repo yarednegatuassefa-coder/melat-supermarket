@@ -24,7 +24,7 @@
     {
       "id": "HARN-002",
       "title": "Deterministic harness preflight",
-      "status": "implemented_unverified",
+      "status": "verified",
       "priority": "high",
       "acceptance_criteria": [
         "Preflight validates core docs and package scripts",
@@ -35,13 +35,15 @@
       ],
       "risk": "low",
       "owner_approval_required": false,
-      "evidence": [],
-      "notes": "Deterministic preflight implementation exists; current branch CI verification pending."
+      "evidence": [
+        "PR #12: Harness preflight passed in Melat CI on 2026-11-25."
+      ],
+      "notes": "Preflight passed without printing environment variable values."
     },
     {
       "id": "HARN-003",
       "title": "CI test/build and Windows bundle verification",
-      "status": "implemented_unverified",
+      "status": "verified",
       "priority": "high",
       "acceptance_criteria": [
         "Hosted PostgreSQL integration tests and builds run",
@@ -52,8 +54,12 @@
       ],
       "risk": "medium",
       "owner_approval_required": false,
-      "evidence": [],
-      "notes": "Workflow exists; current PR run evidence is pending."
+      "evidence": [
+        "PR #12: Domain and disposable PostgreSQL integration tests passed.",
+        "PR #12: API/client build passed.",
+        "PR #12: Windows installation bundle extraction and structural checks passed."
+      ],
+      "notes": "Hosted CI and packaging passed. This does not replace local store-machine or owner acceptance."
     },
     {
       "id": "HARN-004",
@@ -77,7 +83,7 @@
     {
       "id": "HARN-005",
       "title": "Exact-decimal cash drawer availability and close reconciliation",
-      "status": "implemented_unverified",
+      "status": "verified",
       "priority": "critical",
       "acceptance_criteria": [
         "Cash drawer aggregation uses exact four-decimal ETB arithmetic",
@@ -91,8 +97,10 @@
       ],
       "risk": "high",
       "owner_approval_required": true,
-      "evidence": [],
-      "notes": "Service and close path updated with BigInt decimal units; unit and PostgreSQL regression verification pending."
+      "evidence": [
+        "PR #12: Domain and disposable PostgreSQL integration tests passed, including cash-drawer.test.ts and exact balance assertion."
+      ],
+      "notes": "Exact ETB drawer calculations verified in automated tests. Owner-led store acceptance remains required; other sales/refund/reporting monetary paths still need separate exact-arithmetic review."
     }
   ]
 }
