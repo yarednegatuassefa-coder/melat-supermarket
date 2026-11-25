@@ -26,10 +26,11 @@ test("cash drawer aggregates return an exact four-decimal ETB balance", async ()
   const actual = await expectedCashDrawerBalance(fakeClient(exactBalance, capture), "session-1");
 
   assert.equal(actual, "100.1001");
-  assert.match(capture.sql ?? "", /p\.method='cash'/);
-  assert.match(capture.sql, /p\.status IN \('confirmed','settled'\)/);
-  assert.match(capture.sql, /e\.payment_method='cash' AND e\.status='posted'/);
-  assert.match(capture.sql, /r\.payment_method='cash' AND r\.status='posted'/);
+  const query = capture.sql ?? "";
+  assert.match(query, /p\.method='cash'/);
+  assert.match(query, /p\.status IN \('confirmed','settled'\)/);
+  assert.match(query, /e\.payment_method='cash' AND e\.status='posted'/);
+  assert.match(query, /r\.payment_method='cash' AND r\.status='posted'/);
 });
 
 test("cash availability accepts an exact match without floating-point tolerance", async () => {
