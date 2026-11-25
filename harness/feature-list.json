@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "melat-supermarket",
-  "updated_at": "2026-11-16",
+  "updated_at": "2026-11-25",
   "features": [
     {
       "id": "HARN-001",
@@ -24,7 +24,7 @@
     {
       "id": "HARN-002",
       "title": "Deterministic harness preflight",
-      "status": "planned",
+      "status": "implemented_unverified",
       "priority": "high",
       "acceptance_criteria": [
         "Preflight validates core docs and package scripts",
@@ -36,7 +36,7 @@
       "risk": "low",
       "owner_approval_required": false,
       "evidence": [],
-      "notes": "Implementation in this PR."
+      "notes": "Deterministic preflight implementation exists; current branch CI verification pending."
     },
     {
       "id": "HARN-003",
@@ -73,6 +73,26 @@
       "owner_approval_required": true,
       "evidence": [],
       "notes": "Harness state added; store acceptance and backup restore remain separate work."
+    },
+    {
+      "id": "HARN-005",
+      "title": "Exact-decimal cash drawer availability and close reconciliation",
+      "status": "implemented_unverified",
+      "priority": "critical",
+      "acceptance_criteria": [
+        "Cash drawer aggregation uses exact four-decimal ETB arithmetic",
+        "Pending electronic tenders are excluded from physical cash",
+        "Cash availability rejects overdraw down to 0.0001 ETB",
+        "Drawer close variance and journal amount use exact decimal units"
+      ],
+      "verification": [
+        "npm test",
+        "npm run build"
+      ],
+      "risk": "high",
+      "owner_approval_required": true,
+      "evidence": [],
+      "notes": "Service and close path updated with BigInt decimal units; unit and PostgreSQL regression verification pending."
     }
   ]
 }
