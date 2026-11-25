@@ -69,5 +69,8 @@ Use only the skill or skills relevant to the requested deliverable; do not chain
 Skill availability does not authorize tool/dependency installation, paid API or model use, external account connections, production-data access, migrations, deployment, or publication. Obtain separate explicit authorization before any such cost-incurring or externally consequential action. Never expose real customer, employee, supplier, inventory, payment, accounting, or transaction data to external tools or agents.
 
 
+## Workflow quality and evaluation
+Follow the portfolio [Workflow Quality and Evaluation Standard](https://github.com/yarednegatuassefa-coder/home/blob/main/standards/workflow-quality.md) and this repository's [workflow governance plan](docs/workflow-governance.md) for repeated or agent-assisted workflows. Preserve exact ETB arithmetic, balanced journals, atomic stock movements, payment settlement state, auditability and store acceptance gates. AI must not post financial or inventory changes or make financial decisions. Keep telemetry and external data exposure disabled unless separately approved.
+
 ## Code-mode agent architecture
 For any AI/tool orchestration task, consult the portfolio [Code-Mode Agent Engineering Standard](https://github.com/yarednegatuassefa-coder/home/blob/main/standards/code-mode-agent-engineering.md), [Portfolio Code-Mode skill](https://github.com/yarednegatuassefa-coder/home/blob/main/skills/portfolio-code-mode/SKILL.md), and this repository's `docs/agent-code-mode.md`. This guidance does not grant production access, external model use, patient/customer data transfer, writes, deployment or other approvals. Project-specific safeguards above remain authoritative.
