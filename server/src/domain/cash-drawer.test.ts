@@ -21,7 +21,7 @@ const exactBalance = {
 };
 
 test("cash drawer aggregates return an exact four-decimal ETB balance", async () => {
-  const capture = {};
+  const capture: { sql: string } = { sql: "" };
   const actual = await expectedCashDrawerBalance(fakeClient(exactBalance, capture), "session-1");
 
   assert.equal(actual, "100.1001");
