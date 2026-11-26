@@ -74,3 +74,21 @@ Follow the portfolio [Workflow Quality and Evaluation Standard](https://github.c
 
 ## Code-mode agent architecture
 For any AI/tool orchestration task, consult the portfolio [Code-Mode Agent Engineering Standard](https://github.com/yarednegatuassefa-coder/home/blob/main/standards/code-mode-agent-engineering.md), [Portfolio Code-Mode skill](https://github.com/yarednegatuassefa-coder/home/blob/main/skills/portfolio-code-mode/SKILL.md), and this repository's `docs/agent-code-mode.md`. This guidance does not grant production access, external model use, patient/customer data transfer, writes, deployment or other approvals. Project-specific safeguards above remain authoritative.
+
+
+## Emil Kowalski design-engineering skills
+
+For interface and interaction work, use the upstream [Emil Kowalski skills](https://github.com/emilkowalski/skills) through the shared Home skill installation. The Home catalog is the portfolio routing reference: https://github.com/yarednegatuassefa-coder/home/blob/main/skills/README.md.
+
+Apply only the skill that matches the task; do not invoke the entire collection by default. This is an operational POS and inventory/accounting interface. Prioritize speed, scanability, dense-data legibility, keyboard/touch efficiency, and reliable error prevention. Keep cashier workflows immediate; avoid decorative animation in POS, payment, stock, reconciliation, and accounting flows. Never compromise financial or inventory invariants for visual effects.
+
+- **Design baseline:** consult `emil-design-eng` for relevant UI/animation decisions; preserve the product's existing design tokens and component conventions.
+- **Build motion:** use `animate` for requested motion, `choreograph` for coordinated sequences, and `gestures` / `animate-expo` only when the product actually has gesture or Expo-native interactions.
+- **Audit and repair:** use `review-animations` for changed motion, `improve-animations` for a codebase-wide motion audit and plans, `animation-performance` for dropped frames, and `remove-animations` when motion is unnecessary.
+- **Responsive/mobile QA:** use `mobile-native` for mobile-web behavior and `break-ui` for worst-case content and layout stress tests.
+- **Architecture and exploration:** use `pick-ui-library` before adding a UI dependency; use `prototype` when comparing interaction concepts; use `apple-design` only when its platform principles fit the product.
+- **Learning and routing:** use `ask-emil` when the right design skill or sequence is unclear; use `learn-taste` at the end of a design session to capture approved corrections as durable project rules. Use `ask-sonner` only if this project uses Sonner.
+
+**Quality gates:** motion must have a user-facing purpose, respect frequency and performance budgets, support `prefers-reduced-motion`, and avoid animating high-frequency or information-dense workflows. Prefer no animation over decorative motion. Keep keyboard and primary operational flows immediate. Reuse existing tokens and dependencies; do not add a library or alter the visual system without task scope and approval. Validate desktop/mobile, keyboard/focus, reduced-motion, loading/empty/error states, and long/unusual content as applicable.
+
+These skills do not override this repository's domain, security, privacy, accessibility, financial, clinical, or release safeguards. Skill availability is not authorization to install dependencies, call paid services, access production data, publish, or deploy.
