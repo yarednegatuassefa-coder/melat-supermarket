@@ -233,3 +233,30 @@ footer span{color:#a3aea6}
   .login-panel{padding:27px 23px}
   footer{gap:10px;flex-direction:column}
 }
+
+/* Design-engineering hardening: operational controls stay immediate and predictable. */
+.operation-panel button:active,
+.compact-form button:active,
+.form-stack button:active,
+.product-form > button:active {
+  transform: none;
+}
+@media (hover: none), (pointer: coarse) {
+  .module-card:hover,
+  .primary-action:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+@media (max-width: 620px) {
+  .form-stack input,
+  .form-stack select,
+  .operation-panel input,
+  .operation-panel select,
+  .compact-form input,
+  .compact-form select,
+  .product-form-grid input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
