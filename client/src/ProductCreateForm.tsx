@@ -16,7 +16,7 @@ export default function ProductCreateForm({ onCreated, onError }: Props) {
     } catch (error) { onError(error instanceof Error ? error.message : "Could not create product."); }
     finally { setBusy(false); }
   }
-  return <form className="product-form" onSubmit={submit}>
+  return <form {...({ toolname: "melat-draft-product-record", tooldescription: "Help an authorized staff member draft a product catalog record. Do not submit or make inventory changes; staff must review and save." } as any)} className="product-form" onSubmit={submit}>
     <div className="product-form-heading"><b>Add product</b><span>New catalog record · ETB</span></div>
     <div className="product-form-grid">
       <label>SKU<input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} required /></label>
