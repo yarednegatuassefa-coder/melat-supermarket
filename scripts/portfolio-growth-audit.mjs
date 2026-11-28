@@ -19,7 +19,7 @@ else {
   const canonical=(html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)/i)||html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']canonical/i)||[])[1]||'';
   const robots=(html.match(/<meta[^>]+name=["']robots["'][^>]+content=["']([^"']+)/i)||[])[1]||'';
   const h1=(html.match(/<h1\b/gi)||[]).length;
-  const meta=(name)=>{const a=html.match(new RegExp('<meta[^>]+(?:name|property)=["\\']'+name+'["\\'][^>]+content=["\\']([^"\\']*)["\\']','i'));return a?.[1]||'';};
+  const meta=(name)=>{const a=html.match(new RegExp("<meta[^>]+(?:name|property)=['\"]"+name+"['\"][^>]+content=['\"]([^'\"]*)['\"]","i"));return a?.[1]||'';};
   add('homepage',page.r.ok?'pass':'fail','HTTP '+page.r.status+'; '+page.r.url,'critical');
   add('title',title.length>=10&&title.length<=70?'pass':'fail',title?'length '+title.length:'missing or too short','high');
   add('meta-description',description.length>=50&&description.length<=180?'pass':'fail',description?'length '+description.length:'missing or outside 50–180 characters','high');
