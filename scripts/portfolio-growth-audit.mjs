@@ -21,12 +21,13 @@ else {
   const headerRobots=page.r.headers.get('x-robots-tag')||'';
   const h1=(html.match(/<h1\b/gi)||[]).length;
   const meta=(name)=>{const a=html.match(new RegExp("<meta[^>]+(?:name|property)=['\"]"+name+"['\"][^>]+content=['\"]([^'\"]*)['\"]","i"));return a?.[1]||'';};
+  const seoSeverity=expected==='index'?'high':'low';
   add('homepage',page.r.ok?'pass':'fail','HTTP '+page.r.status+'; '+page.r.url,'critical');
-  add('title',title.length>=10&&title.length<=70?'pass':'fail',title?'length '+title.length:'missing or too short','high');
-  add('meta-description',description.length>=50&&description.length<=180?'pass':'fail',description?'length '+description.length:'missing or outside 50–180 characters','high');
-  add('canonical',canonical?'pass':expected==='noindex'?'warning':'fail',canonical||'missing; optional for noindex surfaces',expected==='noindex'?'low':'high');
+  add('title',title.length>=10&&title.length<=70?'pass':expected==='index'?'fail':'warning',title?'length '+title.length:'missing or too short',seoSeverity);
+  add('meta-description',description.length>=50&&description.length<=180?'pass':expected==='index'?'fail':'warning',description?'length '+description.length:'missing or outside 50–180 characters',seoSeverity);
+  add('canonical',canonical?'pass':expected==='index'?'fail':'warning',canonical||'missing; optional for noindex surfaces',seoSeverity);
   if(canonical){try{const c=new URL(canonical,base);const sameSite=c.hostname.replace(/^www\./,'')===new URL(base).hostname.replace(/^www\./,'');add('canonical-origin',sameSite?'pass':'fail',c.origin,'high')}catch{add('canonical-origin','fail','invalid URL','high')}}
-  add('h1',h1===1?'pass':'fail','found '+h1+' H1 elements','medium');
+  add('h1',h1===1?'pass':expected==='index'?'fail':'warning','found '+h1+' H1 elements',expected==='index'?'medium':'low');
   add('viewport',/name=["']viewport["']/i.test(html)?'pass':'fail','viewport meta tag','medium');
   add('open-graph',meta('og:title')&&meta('og:description')?'pass':'warning','og:title and og:description','low');
   add('structured-data',/application\/ld\+json/i.test(html)?'pass':'warning','JSON-LD presence only; correctness requires review','low');
