@@ -33,3 +33,7 @@ Use gross margin, stockout rate, inventory accuracy and turnover, shrinkage/expi
 ## Current implementation status
 
 This is a workflow evaluation plan, not evidence that each workflow is implemented or accepted. Track test evidence, store acceptance and unresolved exceptions in the project harness.
+
+## Letter 5 implementation
+
+See the shared [Portfolio AI and Resilience Standard](https://github.com/yarednegatuassefa-coder/home/blob/main/standards/ai-resilience.md) and the Melat [AI/resilience rollout](ai-resilience-rollout.md). The first pilot is aggregate-report summarization only; the local ledger remains authoritative and AI has no financial write authority.
