@@ -31,7 +31,7 @@ jobs:
         continue-on-error: true
         env:
           GROWTH_SITE_URL: 'https://melat-supermarket.vercel.app'
-          GROWTH_INDEX_POLICY: 'index'
+          GROWTH_INDEX_POLICY: 'noindex'
           GROWTH_FORBIDDEN_SITEMAP_TERMS: 'admin,account,pos,inventory,supplier,api,private,preview,staging'
         run: node scripts/portfolio-growth-audit.mjs
       - uses: actions/upload-artifact@v4
