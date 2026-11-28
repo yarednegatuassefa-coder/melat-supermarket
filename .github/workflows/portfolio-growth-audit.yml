@@ -4,15 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '17 7 * * 1'
-  pull_request:
-    paths:
-      - 'app/**'
-      - 'src/**'
-      - 'pages/**'
-      - 'public/**'
-      - 'index.html'
-      - 'scripts/portfolio-growth-audit.mjs'
-      - '.github/workflows/portfolio-growth-audit.yml'
 
 permissions:
   contents: read
