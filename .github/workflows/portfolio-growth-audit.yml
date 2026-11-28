@@ -1,0 +1,60 @@
+name: Portfolio Growth Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 7 * * 1'
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'src/**'
+      - 'pages/**'
+      - 'public/**'
+      - 'index.html'
+      - 'scripts/portfolio-growth-audit.mjs'
+      - '.github/workflows/portfolio-growth-audit.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Audit public search surface
+        id: audit
+        continue-on-error: true
+        env:
+          GROWTH_SITE_URL: 'https://melat-supermarket.vercel.app'
+          GROWTH_INDEX_POLICY: 'index'
+          GROWTH_FORBIDDEN_SITEMAP_TERMS: 'admin,account,pos,inventory,supplier,api,private,preview,staging'
+        run: node scripts/portfolio-growth-audit.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portfolio-growth-audit
+          path: growth-audit.json
+          if-no-files-found: ignore
+      - name: Open or update remediation issue
+        if: steps.audit.outcome == 'failure' && github.event_name != 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '[Growth audit] Public search-surface failures';
+            const body = 'The scheduled public-surface audit found high/critical issues. Download the workflow artifact for exact evidence. Review privacy and indexing policy before changing robots, canonical, sitemap, or structured data. No automatic production changes were made.';
+            const { data: issues } = await github.rest.issues.listForRepo({ owner: context.repo.owner, repo: context.repo.repo, state: 'open', per_page: 100 });
+            const existing = issues.find(i => i.title === title && !i.pull_request);
+            if (existing) await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body });
+            else await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body });
+      - name: Enforce audit result
+        if: always()
+        run: |
+          if [ "${{ steps.audit.outcome }}" = "failure" ]; then
+            echo "Growth audit failed; inspect the summary and artifact."
+            exit 1
+          fi
