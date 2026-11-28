@@ -1,8 +1,30 @@
 {
   "schema_version": 1,
   "project": "melat-supermarket",
-  "updated_at": "2026-11-25",
+  "updated_at": "2026-11-28",
   "features": [
+    {
+      "id": "LETTER5-002",
+      "title": "Bounded aggregate-report summary policy",
+      "status": "implemented_unverified",
+      "priority": "high",
+      "acceptance_criteria": [
+        "Only approved aggregate report metrics with period and source identifiers enter the draft context",
+        "Pending electronic tenders must be excluded",
+        "AI action claims against journals, stock, tenders, purchases and production data are rejected"
+      ],
+      "verification": [
+        "npm run harness:check",
+        "server/src/domain/aggregate-summary-pilot.test.ts"
+      ],
+      "risk": "high",
+      "owner_approval_required": true,
+      "evidence": [
+        "Harness preflight passed on 2026-11-28.",
+        "Synthetic targeted test authored; full execution requires the repository's installed TypeScript runtime."
+      ],
+      "notes": "Policy seam is disconnected from accounting, inventory, payment and production write paths; operational acceptance is not claimed."
+    },
     {
       "id": "HARN-001",
       "title": "Domain-specific harness and accounting/inventory safety gates",

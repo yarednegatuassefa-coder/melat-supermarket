@@ -19,3 +19,12 @@
 - **Not run / blocked:** No store PC, production database, migration, financial posting, deployment or live cash drawer was accessed.
 - **Approval boundary:** Store acceptance remains owner-led; no financial transaction was created.
 - **Next action:** Review CI results and independent diff review before merge; then perform owner-led store acceptance on the local-first installation.
+
+## 2026-11-28 — LETTER5-PILOT-002
+- **Objective:** Add a reviewed, draft-only aggregate-report summary seam without allowing AI to calculate or mutate the accounting, payment or inventory ledger.
+- **Branch:** feat/letter-5-ai-resilience
+- **Changed:** `server/src/domain/aggregate-summary-pilot.ts` and its synthetic tests; allowlisted report facts, period/source requirements, pending-tender exclusion, review markers and action-claim refusals.
+- **Verification:** `npm run harness:check` passed. Targeted synthetic tests are runnable through the repository’s normal `tsx` test command when dependencies are installed; this checkout lacks the local runtime dependency, so direct Node source execution was not available for the `.js` ESM import convention.
+- **Not run / blocked:** `npm test`, `npm run build` and `npm run architecture:check` require the repository’s declared dependencies and/or an isolated PostgreSQL test database. No store database, financial posting, migration, provider, paid API or production data was accessed.
+- **Decision:** Keep this policy seam disconnected from authoritative reports and write paths until CI and owner/accountant review are complete.
+- **Next action:** Review CI results and perform independent financial/inventory safety review before any integration.
